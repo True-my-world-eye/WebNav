@@ -36,7 +36,6 @@ private slots:
     void onEditLink();
     void onOpenLink();
     void onDeleteLink();
-    void onLinksReordered();
     void showContextMenu(const QPoint &pos);
     void onDoubleClicked(int linkId);
 
@@ -46,6 +45,8 @@ private:
     void setupShortcuts();
     void buildLinkModel(const QVector<Link> &links);
     void applyFilters();
+    void saveLinkOrder();
+    void moveSelectedLink(int direction);  // -1=上移, 1=下移, 0=置顶
     int selectedLinkId() const;
     QVector<int> selectedLinkIds() const;
 

@@ -2,6 +2,7 @@
 
 #include "LinkListView.h"
 #include <QHeaderView>
+#include <QDrag>
 
 LinkListView::LinkListView(QWidget *parent)
     : QTableView(parent)
@@ -19,7 +20,7 @@ LinkListView::LinkListView(QWidget *parent)
     setAcceptDrops(true);
     setDropIndicatorShown(true);
     setDragDropMode(QAbstractItemView::InternalMove);
-    setDragDropOverwriteMode(true);   // true = insert 行，false = 尝试覆盖（Qt bug 多）
+    setDragDropOverwriteMode(false);
 
     connect(this, &QTableView::doubleClicked, this, [this](const QModelIndex &index) {
         if (index.isValid())
@@ -46,43 +47,75 @@ void LinkListView::setLinkData(QStandardItemModel *model)
     }
 }
 
+void LinkListView::startDrag(Qt::DropActions supportedActions)
+{
+    // 记录拖拽源行
+    QModelIndex idx = currentIndex();
+    m_dragSourceRow = idx.isValid() ? idx.row() : -1;
+    QTableView::startDrag(supportedActions);
+}
+
 void LinkListView::dropEvent(QDropEvent *event)
 {
-    if (!m_model) return;
-
-    // 记录拖拽前的行数据（linkId 列表）
-    QVector<int> oldIds;
-    for (int r = 0; r < m_model->rowCount(); r++) {
-        int id = m_model->item(r, 0)->data(Qt::UserRole).toInt();
-        oldIds.append(id);
+    if (!m_model || m_dragSourceRow < 0) {
+        QTableView::dropEvent(event);
+        return;
     }
 
-    // 执行默认 drop
-    QTableView::dropEvent(event);
+    int sourceRow = m_dragSourceRow;
 
-    if (!event->isAccepted()) return;
+    // 计算目标行：根据 drop indicator 位置
+    QPoint pos = event->position().toPoint();
+    QModelIndex destIdx = indexAt(pos);
+    int targetRow = -1;
 
-    // 拖拽后 model 的行被 Qt 重新排列了
-    // 读取新顺序的 linkId
-    QVector<int> newIds;
-    for (int r = 0; r < m_model->rowCount(); r++) {
-        int id = m_model->item(r, 0)->data(Qt::UserRole).toInt();
-        newIds.append(id);
-    }
-
-    // 找出哪些行的位置变了
-    int srcRow = -1, dstRow = -1;
-    for (int i = 0; i < newIds.size(); i++) {
-        if (i < oldIds.size() && newIds[i] != oldIds[i]) {
-            // 这个位置变了：在 oldIds 中找到 newIds[i] 的原始位置
-            int oldPos = oldIds.indexOf(newIds[i]);
-            if (oldPos >= 0 && oldPos != i) {
-                srcRow = oldPos;
-                dstRow = i;
-                break;
-            }
+    if (destIdx.isValid()) {
+        targetRow = destIdx.row();
+        // 判断鼠标在目标行的上半还是下半
+        QRect itemRect = visualRect(destIdx);
+        int midY = itemRect.top() + itemRect.height() / 2;
+        if (pos.y() > midY) {
+            targetRow++; // 插入到该行下方
         }
+    } else {
+        // 拖到空白区域 = 放到末尾
+        targetRow = m_model->rowCount();
     }
 
-    emit linkDropped(srcRow, dstRow);
+    // 阻止 Qt 默认的 InternalMove（它太不可靠）
+    event->ignore();
+
+    // 自己执行行移动：取出行，插入到目标位置
+    if (targetRow < 0) return;
+
+    // 收集该行的所有 QStandardItem
+    int cols = m_model->columnCount();
+    QVector<QStandardItem*> rowItems;
+    rowItems.reserve(cols);
+    for (int c = 0; c < cols; c++) {
+        rowItems.append(m_model->takeItem(sourceRow, c));
+    }
+    m_model->removeRow(sourceRow);
+
+    // 如果 targetRow 大于 sourceRow，因为已经删了一行，targetRow 需要 -1
+    int insertRow = targetRow;
+    if (targetRow > sourceRow) {
+        insertRow = targetRow - 1;
+    }
+    // 边界处理
+    if (insertRow < 0) insertRow = 0;
+    if (insertRow > m_model->rowCount()) insertRow = m_model->rowCount();
+
+    // 在目标位置插入
+    for (int c = 0; c < cols; c++) {
+        m_model->setItem(insertRow, c, rowItems[c]);
+    }
+
+    // 选中移动后的行
+    QModelIndex newIdx = m_model->index(insertRow, 0);
+    selectionModel()->setCurrentIndex(newIdx, QItemSelectionModel::ClearAndSelect);
+
+    // 发出信号让 MainWindow 持久化
+    int linkId = m_model->item(insertRow, 0)->data(Qt::UserRole).toInt();
+    emit linkMoveRequested(linkId, insertRow);
 }

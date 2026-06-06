@@ -60,20 +60,11 @@ MainWindow::MainWindow(ILinkRepository *linkRepo, IFolderRepository *folderRepo,
     connect(m_listView, &QWidget::customContextMenuRequested, this, &MainWindow::showContextMenu);
     connect(m_cardView, &QWidget::customContextMenuRequested, this, &MainWindow::showContextMenu);
 
-    // ── 拖拽排序：由 LinkListView 发出拖动完成信号，在此持久化并刷新 ──
-    connect(m_listView, &LinkListView::linkDropped, this, [this](int fromRow, int toRow) {
+    // ── 拖拽排序：由 LinkListView 手动管理拖拽，完成后持久化 ──
+    connect(m_listView, &LinkListView::linkMoveRequested, this, [this](int /*linkId*/, int /*insertRow*/) {
         // 用拖拽后的 model 顺序保存 sort_order
         if (!m_linkModel) return;
-        QVector<QPair<int,int>> orders;
-        for (int i = 0; i < m_linkModel->rowCount(); i++) {
-            int linkId = m_linkModel->item(i, 0)->data(Qt::UserRole).toInt();
-            if (linkId > 0) orders.append({linkId, i});
-        }
-        if (!orders.isEmpty()) {
-            m_linkRepo->reorderLinks(orders);
-            // 完全刷新以消除 Qt InternalMove 造成的显示错乱
-            buildLinkModel(m_linkRepo->getAll());
-        }
+        saveLinkOrder();
     });
 
     connect(m_sidebar, &Sidebar::folderSelected, this, [this](int fid) {
@@ -135,6 +126,22 @@ void MainWindow::setupToolBar()
     m_deleteAction = tb->addAction(QStringLiteral("\U0001F5D1 \u5220\u9664"));
     m_deleteAction->setToolTip(QStringLiteral("\u5220\u9664\u9009\u4e2d\u7684\u94fe\u63a5"));
     connect(m_deleteAction, &QAction::triggered, this, &MainWindow::onDeleteLink);
+
+    tb->addSeparator();
+
+    // \u2500\u2500 \u6392\u5e8f\u64cd\u4f5c \u2500\u2500
+    auto *moveUpAct = tb->addAction(QStringLiteral("\u2191 \u4e0a\u79fb"));
+    moveUpAct->setToolTip(QStringLiteral("\u5c06\u9009\u4e2d\u94fe\u63a5\u4e0a\u79fb\u4e00\u884c"));
+    connect(moveUpAct, &QAction::triggered, this, [this]() { moveSelectedLink(-1); });
+
+    auto *moveDownAct = tb->addAction(QStringLiteral("\u2193 \u4e0b\u79fb"));
+    moveDownAct->setToolTip(QStringLiteral("\u5c06\u9009\u4e2d\u94fe\u63a5\u4e0b\u79fb\u4e00\u884c"));
+    connect(moveDownAct, &QAction::triggered, this, [this]() { moveSelectedLink(1); });
+
+    auto *moveTopAct = tb->addAction(QStringLiteral("\u21a5 \u7f6e\u9876"));
+    moveTopAct->setToolTip(QStringLiteral("\u5c06\u9009\u4e2d\u94fe\u63a5\u7f6e\u9876"));
+    connect(moveTopAct, &QAction::triggered, this, [this]() { moveSelectedLink(0); });
+
     tb->addSeparator();
 
     auto *settingsAct = tb->addAction(QStringLiteral("\u2699 \u8bbe\u7f6e"));
@@ -477,7 +484,7 @@ void MainWindow::showContextMenu(const QPoint &pos)
     }
 }
 
-void MainWindow::onLinksReordered()
+void MainWindow::saveLinkOrder()
 {
     if (!m_linkModel || m_isRebuildingModel) return;
     QVector<QPair<int,int>> orders;
@@ -488,6 +495,62 @@ void MainWindow::onLinksReordered()
     }
     if (!orders.isEmpty())
         m_linkRepo->reorderLinks(orders);
+}
+
+void MainWindow::moveSelectedLink(int direction)
+{
+    int linkId = selectedLinkId();
+    if (linkId <= 0 || !m_linkModel) return;
+
+    // 找到该 link 的当前行
+    int currentRow = -1;
+    for (int i = 0; i < m_linkModel->rowCount(); i++) {
+        if (m_linkModel->item(i, 0)->data(Qt::UserRole).toInt() == linkId) {
+            currentRow = i;
+            break;
+        }
+    }
+    if (currentRow < 0) return;
+
+    int rowCount = m_linkModel->rowCount();
+    int newRow = currentRow;
+
+    if (direction == -1 && currentRow > 0) {
+        newRow = currentRow - 1;  // 上移
+    } else if (direction == 1 && currentRow < rowCount - 1) {
+        newRow = currentRow + 1;  // 下移
+    } else if (direction == 0 && currentRow > 0) {
+        newRow = 0;  // 置顶
+    } else {
+        return;  // 已经是边界
+    }
+
+    // 交换两行的 item（移动行数据）
+    int cols = m_linkModel->columnCount();
+    // 收集源行
+    QVector<QStandardItem*> srcItems;
+    srcItems.reserve(cols);
+    for (int c = 0; c < cols; c++) {
+        srcItems.append(m_linkModel->takeItem(currentRow, c));
+    }
+    m_linkModel->removeRow(currentRow);
+
+    // 如果 newRow > currentRow，因删行需 -1
+    int actualTarget = (newRow > currentRow) ? newRow - 1 : newRow;
+    if (actualTarget < 0) actualTarget = 0;
+    if (actualTarget > m_linkModel->rowCount()) actualTarget = m_linkModel->rowCount();
+
+    // 在目标位置插入
+    m_linkModel->insertRow(actualTarget);
+    for (int c = 0; c < cols; c++) {
+        m_linkModel->setItem(actualTarget, c, srcItems[c]);
+    }
+
+    // 选中移动后的行
+    QModelIndex newIdx = m_linkModel->index(actualTarget, 0);
+    m_listView->selectionModel()->setCurrentIndex(newIdx, QItemSelectionModel::ClearAndSelect);
+
+    saveLinkOrder();
 }
 
 void MainWindow::onNewFolder(int parentId)
