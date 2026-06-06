@@ -1,0 +1,45 @@
+﻿# ── 编译产物 ──
+build/
+*/build/
+out/
+*.o
+*.obj
+*.exe
+*.dll
+*.lib
+*.a
+*.so
+*.dylib
+
+# ── IDE 与编辑器 ──
+.vscode/
+.idea/
+*.user
+*.user.*
+.qtcreator/
+CMakeLists.txt.user*
+
+# ── Qt Creator 部署配置 ──
+*.qtc*
+qtc-*
+
+# ── 系统文件 ──
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ── 第三方库编译产物 ──
+third_party/*/build/
+third_party/*/.libs/
+
+# ── 本地数据库（用户数据，不提交） ──
+*.db
+*.db-journal
+*.sqlite
+
+# ── Python 虚拟环境（sync-server） ──
+sync-server/venv/
+sync-server/.venv/
+__pycache__/
+*.pyc

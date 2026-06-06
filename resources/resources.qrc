@@ -1,0 +1,7 @@
+﻿<RCC>
+    <qresource prefix="/">
+        <file>themes/light.qss</file>
+        <file>themes/dark.qss</file>
+        <file>database/schema.sql</file>
+    </qresource>
+</RCC>
