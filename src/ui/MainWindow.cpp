@@ -1,4 +1,4 @@
-﻿#include "MainWindow.h"
+#include "MainWindow.h"
 #include "LinkEditDialog.h"
 #include "SettingsDialog.h"
 #include "AboutDialog.h"
@@ -19,7 +19,7 @@ MainWindow::MainWindow(ILinkRepository *linkRepo, IFolderRepository *folderRepo,
                        ITagRepository *tagRepo, QWidget *parent)
     : QMainWindow(parent), m_linkRepo(linkRepo), m_folderRepo(folderRepo), m_tagRepo(tagRepo)
 {
-    setWindowTitle(QStringLiteral("WebNav \u2014 \u684c\u9762\u7f51\u9875\u94fe\u63a5\u7ba1\u7406\u5668"));
+    setWindowTitle(QStringLiteral("WebNav"));
     resize(1100, 700);
     setMinimumSize(800, 500);
     setupToolBar();
@@ -42,9 +42,17 @@ MainWindow::MainWindow(ILinkRepository *linkRepo, IFolderRepository *folderRepo,
     splitter->setSizes({220, 880});
     setCentralWidget(splitter);
 
-    // ── 信号连接 ──
-    connect(m_listView, &LinkListView::linkDoubleClicked, this, &MainWindow::openLink);
-    connect(m_cardView, &LinkCardView::linkDoubleClicked, this, &MainWindow::openLink);
+    // Both views: disable direct editing, enable context menu
+    m_listView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_listView->setContextMenuPolicy(Qt::CustomContextMenu);
+    m_cardView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_cardView->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    // Signals
+    connect(m_listView, &LinkListView::linkDoubleClicked, this, &MainWindow::onDoubleClicked);
+    connect(m_cardView, &LinkCardView::linkDoubleClicked, this, &MainWindow::onDoubleClicked);
+    connect(m_listView, &QWidget::customContextMenuRequested, this, &MainWindow::showContextMenu);
+    connect(m_cardView, &QWidget::customContextMenuRequested, this, &MainWindow::showContextMenu);
     connect(m_sidebar, &Sidebar::allLinksRequested, this, &MainWindow::refreshLinks);
     connect(m_sidebar, &Sidebar::recentLinksRequested, this, [this]() {
         buildLinkModel(m_linkRepo->getRecent(50));
@@ -81,9 +89,22 @@ void MainWindow::setupToolBar()
     newAct->setToolTip(QStringLiteral("\u65b0\u5efa\u94fe\u63a5 (Ctrl+N)"));
     connect(newAct, &QAction::triggered, this, &MainWindow::onNewLink);
 
-    m_viewAction = tb->addAction(QStringLiteral("\U0001F4CB \u5217\u8868"));
+    m_viewAction = tb->addAction(QStringLiteral("\u5217\u8868"));
     m_viewAction->setToolTip(QStringLiteral("\u5207\u6362\u89c6\u56fe (Ctrl+1/2)"));
     connect(m_viewAction, &QAction::triggered, this, &MainWindow::toggleView);
+    tb->addSeparator();
+
+    m_editAction = tb->addAction(QStringLiteral("\u270f \u7f16\u8f91"));
+    m_editAction->setToolTip(QStringLiteral("\u7f16\u8f91\u9009\u4e2d\u7684\u94fe\u63a5"));
+    connect(m_editAction, &QAction::triggered, this, &MainWindow::onEditLink);
+
+    m_openAction = tb->addAction(QStringLiteral("\U0001F310 \u6253\u5f00"));
+    m_openAction->setToolTip(QStringLiteral("\u5728\u6d4f\u89c8\u5668\u4e2d\u6253\u5f00\u9009\u4e2d\u94fe\u63a5"));
+    connect(m_openAction, &QAction::triggered, this, &MainWindow::onOpenLink);
+
+    m_deleteAction = tb->addAction(QStringLiteral("\U0001F5D1 \u5220\u9664"));
+    m_deleteAction->setToolTip(QStringLiteral("\u5220\u9664\u9009\u4e2d\u7684\u94fe\u63a5"));
+    connect(m_deleteAction, &QAction::triggered, this, &MainWindow::onDeleteLink);
     tb->addSeparator();
 
     auto *settingsAct = tb->addAction(QStringLiteral("\u2699 \u8bbe\u7f6e"));
@@ -111,6 +132,10 @@ void MainWindow::setupShortcuts()
     connect(new QShortcut(QKeySequence("Ctrl+2"), this), &QShortcut::activated, this, [this]() {
         if (!m_isCardView) toggleView();
     });
+
+    // Delete shortcut
+    auto *delSC = new QShortcut(QKeySequence("Delete"), this);
+    connect(delSC, &QShortcut::activated, this, &MainWindow::onDeleteLink);
 }
 
 void MainWindow::buildLinkModel(const QVector<Link> &links)
@@ -134,22 +159,32 @@ void MainWindow::buildLinkModel(const QVector<Link> &links)
         auto *titleItem = new QStandardItem(link.title.isEmpty() ? link.url : link.title);
         titleItem->setData(link.id, Qt::UserRole);
         titleItem->setToolTip(link.url);
+        titleItem->setFlags(titleItem->flags() & ~Qt::ItemIsEditable);
         m_linkModel->setItem(i, 0, titleItem);
-        m_linkModel->setItem(i, 1, new QStandardItem(link.url));
+
+        auto *urlItem = new QStandardItem(link.url);
+        urlItem->setFlags(urlItem->flags() & ~Qt::ItemIsEditable);
+        m_linkModel->setItem(i, 1, urlItem);
 
         QString folderName = folderNames.value(link.folderId);
-        m_linkModel->setItem(i, 2, new QStandardItem(folderName));
+        auto *folderItem = new QStandardItem(folderName);
+        folderItem->setFlags(folderItem->flags() & ~Qt::ItemIsEditable);
+        m_linkModel->setItem(i, 2, folderItem);
 
         QStringList tagNames;
         if (m_tagRepo) {
             for (const auto &t : m_tagRepo->getTagsForLink(link.id))
                 tagNames << t.name;
         }
-        m_linkModel->setItem(i, 3, new QStandardItem(tagNames.join(", ")));
+        auto *tagItem = new QStandardItem(tagNames.join(", "));
+        tagItem->setFlags(tagItem->flags() & ~Qt::ItemIsEditable);
+        m_linkModel->setItem(i, 3, tagItem);
 
         QString timeStr = link.createdAt.isValid()
             ? link.createdAt.toString("yyyy-MM-dd") : QString();
-        m_linkModel->setItem(i, 4, new QStandardItem(timeStr));
+        auto *timeItem = new QStandardItem(timeStr);
+        timeItem->setFlags(timeItem->flags() & ~Qt::ItemIsEditable);
+        m_linkModel->setItem(i, 4, timeItem);
     }
 
     m_listView->setLinkData(m_linkModel);
@@ -179,11 +214,7 @@ void MainWindow::onNewLink()
 
     connect(&dialog, &LinkEditDialog::createNewTag, this, [this](const QString &name) {
         Tag t; t.name = name;
-        int tid = m_tagRepo->insert(t);
-        if (tid > 0) {
-            QVector<Tag> tags = m_tagRepo->getAll();
-            (void)tid;
-        }
+        m_tagRepo->insert(t);
     });
 
     if (dialog.exec() == QDialog::Accepted)
@@ -192,11 +223,9 @@ void MainWindow::onNewLink()
         int id = m_linkRepo->insert(link);
         if (id > 0)
         {
-            // 保存标签关联
             for (int tagId : dialog.selectedTagIds())
                 m_tagRepo->addTagToLink(id, tagId);
 
-            // 保存附加字段
             auto fields = dialog.linkFields();
             for (auto &f : fields)
                 f.linkId = id;
@@ -216,11 +245,107 @@ void MainWindow::toggleView()
     if (m_viewAction)
         m_viewAction->setText(m_isCardView
             ? QStringLiteral("\U0001F5BC \u5361\u7247")
-            : QStringLiteral("\U0001F4CB \u5217\u8868"));
+            : QStringLiteral("\u5217\u8868"));
 }
 
-void MainWindow::openLink(int linkId)
+int MainWindow::selectedLinkId() const
 {
+    int viewIdx = m_viewStack->currentIndex();
+    if (viewIdx == 0) {
+        auto sel = m_listView->selectionModel();
+        if (sel && sel->hasSelection())
+            return sel->currentIndex().data(Qt::UserRole).toInt();
+    } else {
+        auto sel = m_cardView->selectionModel();
+        if (sel && sel->hasSelection())
+            return sel->currentIndex().data(Qt::UserRole).toInt();
+    }
+    return -1;
+}
+
+QVector<int> MainWindow::selectedLinkIds() const
+{
+    QVector<int> ids;
+    int viewIdx = m_viewStack->currentIndex();
+    QItemSelectionModel *sel = (viewIdx == 0)
+        ? m_listView->selectionModel()
+        : m_cardView->selectionModel();
+    if (sel && sel->hasSelection()) {
+        for (const QModelIndex &idx : sel->selectedRows())
+            ids.append(idx.data(Qt::UserRole).toInt());
+    }
+    return ids;
+}
+
+void MainWindow::onDoubleClicked(int linkId)
+{
+    // Double-click opens edit dialog
+    auto opt = m_linkRepo->getById(linkId);
+    if (!opt.has_value()) return;
+    Link link = opt.value();
+
+    LinkEditDialog dialog(this);
+    dialog.setWindowTitle(QStringLiteral("\u7f16\u8f91\u94fe\u63a5"));
+    dialog.setLink(link);
+    dialog.setFolders(m_folderRepo->getAll());
+    dialog.setTags(m_tagRepo->getAll());
+    dialog.fieldEditor()->setFields(m_linkRepo->getLinkFields(linkId));
+
+    // Pre-select tags
+    if (m_tagRepo) {
+        QVector<int> tagIds;
+        for (const auto &t : m_tagRepo->getTagsForLink(linkId))
+            tagIds.append(t.id);
+        dialog.tagSelector()->setSelectedTagIds(tagIds);
+    }
+
+    connect(&dialog, &LinkEditDialog::createNewTag, this, [this](const QString &name) {
+        Tag t; t.name = name;
+        m_tagRepo->insert(t);
+    });
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        Link updated = dialog.link();
+        updated.id = linkId;
+        updated.createdAt = link.createdAt;
+        m_linkRepo->update(updated);
+
+        // Update tags
+        if (m_tagRepo) {
+            for (const auto &t : m_tagRepo->getTagsForLink(linkId))
+                m_tagRepo->removeTagFromLink(linkId, t.id);
+            for (int tagId : dialog.selectedTagIds())
+                m_tagRepo->addTagToLink(linkId, tagId);
+        }
+
+        // Update fields
+        auto fields = dialog.linkFields();
+        for (auto &f : fields) f.linkId = linkId;
+        m_linkRepo->saveLinkFields(linkId, fields);
+
+        statusBar()->showMessage(QStringLiteral("\u94fe\u63a5\u5df2\u66f4\u65b0"), 3000);
+        refreshLinks();
+    }
+}
+
+void MainWindow::onEditLink()
+{
+    int linkId = selectedLinkId();
+    if (linkId <= 0) {
+        statusBar()->showMessage(QStringLiteral("\u8bf7\u5148\u9009\u62e9\u4e00\u6761\u94fe\u63a5"), 3000);
+        return;
+    }
+    onDoubleClicked(linkId);
+}
+
+void MainWindow::onOpenLink()
+{
+    int linkId = selectedLinkId();
+    if (linkId <= 0) {
+        statusBar()->showMessage(QStringLiteral("\u8bf7\u5148\u9009\u62e9\u4e00\u6761\u94fe\u63a5"), 3000);
+        return;
+    }
     auto opt = m_linkRepo->getById(linkId);
     if (opt.has_value())
     {
@@ -229,6 +354,70 @@ void MainWindow::openLink(int linkId)
         l.lastVisitedAt = QDateTime::currentDateTime();
         m_linkRepo->update(l);
         PlatformUtils::openInBrowser(l.url);
+    }
+}
+
+void MainWindow::onDeleteLink()
+{
+    QVector<int> ids = selectedLinkIds();
+    if (ids.isEmpty()) {
+        statusBar()->showMessage(QStringLiteral("\u8bf7\u5148\u9009\u62e9\u8981\u5220\u9664\u7684\u94fe\u63a5"), 3000);
+        return;
+    }
+
+    QString msg = (ids.size() == 1)
+        ? QStringLiteral("\u786e\u5b9a\u8981\u5220\u9664\u8fd9\u6761\u94fe\u63a5\u5417\uff1f")
+        : QStringLiteral("\u786e\u5b9a\u8981\u5220\u9664\u8fd9 %1 \u6761\u94fe\u63a5\u5417\uff1f").arg(ids.size());
+
+    auto ret = QMessageBox::question(this,
+        QStringLiteral("\u5220\u9664\u94fe\u63a5"), msg,
+        QMessageBox::Yes | QMessageBox::No);
+    if (ret == QMessageBox::Yes) {
+        m_linkRepo->removeMultiple(ids);
+        statusBar()->showMessage(
+            QStringLiteral("\u5df2\u5220\u9664 %1 \u6761\u94fe\u63a5").arg(ids.size()), 3000);
+        refreshLinks();
+    }
+}
+
+void MainWindow::showContextMenu(const QPoint &pos)
+{
+    QModelIndex index;
+    int viewIdx = m_viewStack->currentIndex();
+    if (viewIdx == 0)
+        index = m_listView->indexAt(pos);
+    else
+        index = m_cardView->indexAt(pos);
+
+    if (!index.isValid()) return;
+
+    int linkId = index.data(Qt::UserRole).toInt();
+    if (linkId <= 0) return;
+
+    QMenu menu(this);
+    QAction *openAct = menu.addAction(QStringLiteral("\U0001F310 \u6253\u5f00\u94fe\u63a5"));
+    QAction *editAct = menu.addAction(QStringLiteral("\u270f \u7f16\u8f91"));
+    menu.addSeparator();
+    QAction *delAct = menu.addAction(QStringLiteral("\U0001F5D1 \u5220\u9664"));
+
+    QAction *chosen = menu.exec(viewIdx == 0
+        ? m_listView->viewport()->mapToGlobal(pos)
+        : m_cardView->viewport()->mapToGlobal(pos));
+
+    if (chosen == openAct) {
+        auto opt = m_linkRepo->getById(linkId);
+        if (opt.has_value()) {
+            Link l = opt.value();
+            l.visitCount++;
+            l.lastVisitedAt = QDateTime::currentDateTime();
+            m_linkRepo->update(l);
+            PlatformUtils::openInBrowser(l.url);
+        }
+    } else if (chosen == editAct) {
+        onDoubleClicked(linkId);
+    } else if (chosen == delAct) {
+        m_linkRepo->remove(linkId);
+        refreshLinks();
     }
 }
 

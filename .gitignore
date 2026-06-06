@@ -1,4 +1,4 @@
-﻿# ── 编译产物 ──
+# ── 编译产物 ──
 build/
 */build/
 out/
@@ -44,6 +44,19 @@ sync-server/.venv/
 __pycache__/
 *.pyc
 
-# 旧版 Qt Creator 项目
-Web-Navigation/
+# ── 临时生成文件（脚本产物、测试日志） ──
+tmp/
+*.log
+*.pyc
+__pycache__/
+.DS_Store
 
+# ── 自动生成的 MOC/UI/RCC 文件 ──
+*_autogen/
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+
+# ── 编辑器备份文件 ──
+*~
+*.bak

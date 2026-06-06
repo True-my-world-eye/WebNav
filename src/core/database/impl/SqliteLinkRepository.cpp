@@ -1,4 +1,4 @@
-﻿// SqliteLinkRepository.cpp
+// SqliteLinkRepository.cpp
 
 #include "SqliteLinkRepository.h"
 #include <QSqlQuery>
@@ -136,12 +136,12 @@ int SqliteLinkRepository::insert(const Link &link)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime("now"), datetime("now"), ?)
     )");
     query.addBindValue(link.folderId > 0 ? QVariant(link.folderId) : QVariant());
-    query.addBindValue(link.title);
+    query.addBindValue(link.title.isNull() ? QString("") : link.title);
     query.addBindValue(link.url);
-    query.addBindValue(link.description);
-    query.addBindValue(link.notes);
-    query.addBindValue(link.faviconPath);
-    query.addBindValue(link.thumbnailPath);
+    query.addBindValue(link.description.isNull() ? QString("") : link.description);
+    query.addBindValue(link.notes.isNull() ? QString("") : link.notes);
+    query.addBindValue(link.faviconPath.isNull() ? QString("") : link.faviconPath);
+    query.addBindValue(link.thumbnailPath.isNull() ? QString("") : link.thumbnailPath);
     query.addBindValue(link.visitCount);
     query.addBindValue(link.lastVisitedAt.isValid() ? QVariant(link.lastVisitedAt.toString(Qt::ISODate)) : QVariant());
     query.addBindValue(link.isBroken ? 1 : 0);
@@ -165,12 +165,12 @@ bool SqliteLinkRepository::update(const Link &link)
         WHERE id=?
     )");
     query.addBindValue(link.folderId > 0 ? QVariant(link.folderId) : QVariant());
-    query.addBindValue(link.title);
+    query.addBindValue(link.title.isNull() ? QString("") : link.title);
     query.addBindValue(link.url);
-    query.addBindValue(link.description);
-    query.addBindValue(link.notes);
-    query.addBindValue(link.faviconPath);
-    query.addBindValue(link.thumbnailPath);
+    query.addBindValue(link.description.isNull() ? QString("") : link.description);
+    query.addBindValue(link.notes.isNull() ? QString("") : link.notes);
+    query.addBindValue(link.faviconPath.isNull() ? QString("") : link.faviconPath);
+    query.addBindValue(link.thumbnailPath.isNull() ? QString("") : link.thumbnailPath);
     query.addBindValue(link.visitCount);
     query.addBindValue(link.lastVisitedAt.isValid() ? QVariant(link.lastVisitedAt.toString(Qt::ISODate)) : QVariant());
     query.addBindValue(link.isBroken ? 1 : 0);

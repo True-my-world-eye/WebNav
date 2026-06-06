@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563EB"/>
+      <stop offset="100%" style="stop-color:#7C3AED"/>
+    </linearGradient>
+  </defs>
+  <!-- 圆角方形背景 -->
+  <rect x="32" y="32" width="448" height="448" rx="96" ry="96" fill="url(#bg)"/>
+  <!-- 罗盘外圈 -->
+  <circle cx="256" cy="256" r="160" fill="none" stroke="white" stroke-width="12"/>
+  <circle cx="256" cy="256" r="140" fill="none" stroke="white" stroke-width="3" opacity="0.3"/>
+  <!-- 罗盘十字线 -->
+  <line x1="256" y1="96" x2="256" y2="416" stroke="white" stroke-width="4" opacity="0.3"/>
+  <line x1="96" y1="256" x2="416" y2="256" stroke="white" stroke-width="4" opacity="0.3"/>
+  <!-- N/S/E/W 标记 -->
+  <text x="256" y="130" text-anchor="middle" fill="white" font-size="28" font-weight="bold" font-family="sans-serif">N</text>
+  <text x="256" y="400" text-anchor="middle" fill="white" font-size="28" font-weight="bold" font-family="sans-serif">S</text>
+  <text x="405" y="266" text-anchor="middle" fill="white" font-size="28" font-weight="bold" font-family="sans-serif">E</text>
+  <text x="107" y="266" text-anchor="middle" fill="white" font-size="28" font-weight="bold" font-family="sans-serif">W</text>
+  <!-- 罗盘指针（上北下南） -->
+  <polygon points="256,116 240,256 256,260 272,256" fill="#FF6B35"/>
+  <polygon points="256,396 240,256 256,252 272,256" fill="white" opacity="0.7"/>
+  <!-- 中心圆点 -->
+  <circle cx="256" cy="256" r="12" fill="white"/>
+  <!-- 装饰：外圈刻度 -->
+  <g stroke="white" stroke-width="3" opacity="0.4">
+    <line x1="256" y1="80" x2="256" y2="92"/>
+    <line x1="256" y1="420" x2="256" y2="432"/>
+    <line x1="80" y1="256" x2="92" y2="256"/>
+    <line x1="420" y1="256" x2="432" y2="256"/>
+  </g>
+</svg>

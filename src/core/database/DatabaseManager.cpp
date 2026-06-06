@@ -1,4 +1,4 @@
-﻿// DatabaseManager.cpp — 数据库管理器实现
+// DatabaseManager.cpp — 数据库管理器实现
 
 #include "DatabaseManager.h"
 #include <QCoreApplication>
@@ -111,16 +111,31 @@ bool DatabaseManager::executeSchema()
     for (const QString &stmt : statements)
     {
         QString trimmed = stmt.trimmed();
-        if (trimmed.isEmpty() || trimmed.startsWith("--"))
+        if (trimmed.isEmpty())
             continue;
 
-        if (!query.exec(trimmed))
+        // 清除开头的注释行（--开头的行），避免有效SQL因前置注释而被跳过
+        QString cleaned;
+        const QStringList lines = trimmed.split('\n');
+        for (const QString &line : lines)
+        {
+            if (!line.trimmed().startsWith("--"))
+            {
+                if (!cleaned.isEmpty()) cleaned += '\n';
+                cleaned += line;
+            }
+        }
+        cleaned = cleaned.trimmed();
+        if (cleaned.isEmpty())
+            continue;
+
+        if (!query.exec(cleaned))
         {
             // 忽略 "already exists" 类错误
             if (!query.lastError().text().contains("already exists"))
             {
                 qWarning() << "[DB] SQL 执行失败:" << query.lastError().text()
-                           << "\n  语句:" << trimmed.left(80);
+                           << "\n  语句:" << cleaned.left(80);
             }
         }
     }

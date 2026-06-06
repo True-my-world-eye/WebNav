@@ -23,6 +23,7 @@ public:
     void setFolders(const QVector<Folder> &folders);
     void setTags(const QVector<Tag> &tags);
     TagSelector *tagSelector() const { return m_tagSelector; }
+    FieldEditor *fieldEditor() const { return m_fieldEditor; }
 signals:
     void createNewTag(const QString &name);
 private slots:

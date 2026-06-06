@@ -1,4 +1,6 @@
-﻿#pragma once
+// MainWindow.h — 主窗口框架
+
+#pragma once
 #include <QMainWindow>
 #include <QStackedWidget>
 #include <QStandardItemModel>
@@ -24,18 +26,24 @@ private slots:
     void toggleView();
     void onSearch(const QString &keyword);
     void refreshLinks();
-    void openLink(int linkId);
     void openSettings();
     void openAbout();
     void onNewFolder(int parentId);
     void onRenameFolder(int folderId);
     void onDeleteFolder(int folderId);
+    void onEditLink();
+    void onOpenLink();
+    void onDeleteLink();
+    void showContextMenu(const QPoint &pos);
+    void onDoubleClicked(int linkId);
 
 private:
     void setupToolBar();
     void setupStatusBar();
     void setupShortcuts();
     void buildLinkModel(const QVector<Link> &links);
+    int selectedLinkId() const;
+    QVector<int> selectedLinkIds() const;
 
     ILinkRepository   *m_linkRepo;
     IFolderRepository *m_folderRepo;
@@ -48,5 +56,8 @@ private:
     LinkCardView  *m_cardView;
     QStandardItemModel *m_linkModel = nullptr;
     QAction *m_viewAction = nullptr;
+    QAction *m_editAction = nullptr;
+    QAction *m_openAction = nullptr;
+    QAction *m_deleteAction = nullptr;
     bool m_isCardView = false;
 };

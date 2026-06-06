@@ -553,3 +553,38 @@ public:
 3. 实现批量操作功能
 4. 添加导入导出对话框的 UI 入口
 5. 开始 Phase 2 功能
+
+---
+
+## 18. Bug 修复记录
+
+> 本节记录开发/测试中遇到的运行时 Bug 及其修复方案，便于后续回溯。
+
+### Bug 1: schema.sql 建表语句因前置注释被跳过
+
+**症状**：启动日志显示 CREATE INDEX 因"no such table"失败，所有表未创建，插入报"Parameter count mismatch"。
+
+**根因**：DatabaseManager::executeSchema() 将 schema.sql 按 ; 分割后，用 	rimmed.startsWith("--") 判断是否为注释行。但每个 CREATE TABLE 前都有 -- 文件夹表 这样的注释行，分割后的语句以 -- 开头，整条被跳过。只有不带前置注释的 CREATE INDEX 被执行，但因表不存在而失败。
+
+**修复**：将单行 startsWith("--") 判断改为逐行过滤——只移除纯注释行，保留后续 SQL 再执行。
+
+**涉及文件**：
+- src/core/database/DatabaseManager.cpp — executeSchema() 方法
+
+**修复提交**：—
+
+### Bug 2: 默认构造的 QString 被 Qt SQLite 驱动绑定为 SQL NULL
+
+**症状**：建表成功后，插入链接报 NOT NULL constraint failed: links.description。
+
+**根因**：C++ 中 QString() 默认构造的是 **null string**（isNull() == true，与 QString("") 不同——后者是非 null 的空字符串）。当 QVariant(QString()) 传入 QSqlQuery::addBindValue() 时，Qt SQLite 驱动检查 QVariant 内部值的 isNull 状态，为 null 则绑定为 SQLite NULL。而 links.description 列定义为 TEXT NOT NULL DEFAULT ""，无法接受 NULL。
+
+**影响范围**：所有通过 ddBindValue 传入默认构造 QString 的 NOT NULL TEXT 列（insert 和 update 方法均受影响）。
+
+**修复**：在 SqliteLinkRepository::insert() 和 update() 中，对 	itle、description、
+otes、aviconPath、	humbnailPath 五个字段用 link.field.isNull() ? QString("") : link.field 显式将 null QString 转为空字符串后再绑定。url 为必填字段，保持原样。
+
+**涉及文件**：
+- src/core/database/impl/SqliteLinkRepository.cpp — insert() 和 update() 方法
+
+**修复提交**：—
