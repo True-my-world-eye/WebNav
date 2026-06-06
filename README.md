@@ -1,11 +1,13 @@
-﻿# WebNav — 桌面网页链接管理器
+# WebNav — 桌面网页链接管理器
 
 > 基于 C++ / Qt 6 的桌面网页链接管理器
-> 双视图可切换 · 链接账密存储 · 可扩展云端同步
+> 双视图可切换 · 拖拽排序 · 链接账密存储 · 可扩展云端同步
+
+![WebNav](resources/icons/app.svg)
 
 ## 项目状态
 
-✅ **Phase 1 核心体验完成** — 模块化构建，5 次提交，约 4000 行代码
+✅ **Phase 1 核心体验完成** — 模块化构建，约 4000+ 行代码，完整交互闭环
 
 ### 已完成的模块
 
@@ -15,11 +17,11 @@
 | ✅ 数据模型 | Link / Folder / Tag / LinkField 纯数据结构 |
 | ✅ 数据库层 | SQLite + Repository 接口抽象 + CRUD 完整实现 |
 | ✅ 核心服务 | CryptoService(DPAPI加密)、FaviconService、书签导入导出、死链检测 |
-| ✅ UI 组件 | Sidebar、SearchBar、TagSelector、FieldEditor 等 |
-| ✅ 双视图 | 列表视图(Ctrl+1) + 卡片视图(Ctrl+2) |
-| ✅ 对话框 | LinkEditDialog(含附加字段)、SettingsDialog、AboutDialog |
-| ✅ 主窗口 | 工具栏、快捷键、状态栏、视图切换 |
-| ✅ 应用层 | Application 初始化、主题加载、全局快捷键框架 |
+| ✅ UI 组件 | Sidebar(文件夹树+标签列表)、SearchBar、TagSelector、FieldEditor |
+| ✅ 双视图 | 列表视图(Ctrl+1) + 卡片视图(Ctrl+2)，内置拖拽排序 |
+| ✅ 对话框 | LinkEditDialog(含附加字段+时间信息)、SettingsDialog、AboutDialog |
+| ✅ 主窗口 | 工具栏(新建/编辑/打开/删除)、快捷键、状态栏、视图切换 |
+| ✅ 应用层 | Application 初始化、主题加载、SVG 应用图标 |
 | ✅ 工具类 | 跨平台打开浏览器、颜色/图片工具 |
 
 ## 环境要求
@@ -32,26 +34,32 @@
 ## 快速开始
 
 ```bash
+git clone https://github.com/yourusername/WebNav.git
+cd WebNav
 mkdir build && cd build
-cmake .. -DCMAKE_PREFIX_PATH=/path/to/Qt6
-cmake --build .
-./WebNav
+cmake .. -DCMAKE_PREFIX_PATH=/path/to/Qt6/6.x.x/mingw_64
+cmake --build . --target WebNav -- -j8
+./src/WebNav.exe
 ```
-
-## 项目结构
-
-详见 [design.md](design.md) 的 §3 项目目录结构。
 
 ## 功能特色
 
 - **双视图浏览**: 列表视图和卡片视图一键切换 (Ctrl+1 / Ctrl+2)
-- **文件夹管理**: 无限层级树形分类
-- **标签系统**: 彩色标签筛选
+- **拖拽排序**: 列表视图中直接拖动行改变链接先后顺序
+- **文件夹管理**: 无限层级树形分类，右键菜单支持新建/重命名/删除
+- **标签系统**: 彩色标签筛选，右键可删除标签
+- **鼠标交互**:
+  - 单击 → 选中
+  - 双击 → 编辑链接
+  - 右键 → 上下文菜单（打开/编辑/删除）
+  - 拖拽 → 重新排序
+- **工具栏**: ✏编辑 / 🌐打开 / 🗑删除 按钮，配合右键菜单完成所有操作
 - **附加字段**: 为链接保存账号/密码/邮箱/电话等凭据（密码加密存储）
 - **书签导入**: 支持 Chrome / Firefox / Edge HTML 导入
 - **实时搜索**: 300ms 防抖，搜索标题/URL/备注
 - **深色/浅色主题**: 跟随系统自动切换
-- **快捷键**: Ctrl+N 新建 / Ctrl+F 搜索 / Ctrl+D 快速收藏
+- **快捷键**: Ctrl+N 新建 / Ctrl+F 搜索 / Delete 删除
+- **应用图标**: 自定义罗盘 SVG 图标
 - **未来计划**: 云端同步（Phase 3, Alibaba ECS + FastAPI）
 
 ## 快捷键
@@ -62,12 +70,17 @@ cmake --build .
 | `Ctrl+F` | 搜索框聚焦 |
 | `Ctrl+1` | 列表视图 |
 | `Ctrl+2` | 卡片视图 |
-| `Delete` | 删除选中 |
-| `Enter` | 打开链接 |
+| `Delete` | 删除选中链接 |
+| `双击` | 编辑链接 |
+| `右键` | 上下文菜单 |
+| `拖拽` | 重新排序 |
+
+> **注意**: 链接不在主页直接编辑，所有编辑操作通过双击或✏编辑按钮进入对话框完成。打开链接请使用工具栏🌐按钮或右键菜单。
 
 ## 相关文档
 
 - [设计文档](design.md) — 完整的设计方案、数据库设计、架构说明
+- [开发规范](CONTRIBUTING.md) — 代码风格、工作流程、常见陷阱
 
 ## 许可证
 
