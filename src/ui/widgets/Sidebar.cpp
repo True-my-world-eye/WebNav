@@ -1,10 +1,12 @@
-﻿#include "Sidebar.h"
+#include "Sidebar.h"
 #include "database/interfaces/IFolderRepository.h"
 #include "database/interfaces/ITagRepository.h"
 #include "models/Folder.h"
 #include "models/Tag.h"
 #include "ColorUtils.h"
 #include <QVBoxLayout>
+#include <QMenu>
+#include <QMessageBox>
 
 Sidebar::Sidebar(QWidget *parent) : QWidget(parent)
 {
@@ -17,14 +19,14 @@ Sidebar::Sidebar(QWidget *parent) : QWidget(parent)
     setupSmartList();
     layout->addWidget(m_smartList);
 
-    auto *folderTitle = new QLabel(QStringLiteral("\U0001F4C1 \u6587\u4ef6\u5939"), this);
+    auto *folderTitle = new QLabel(QStringLiteral("📁 文件夹"), this);
     folderTitle->setObjectName("sectionTitle");
     layout->addWidget(folderTitle);
 
     setupFolderTree();
     layout->addWidget(m_folderTree);
 
-    auto *tagTitle = new QLabel(QStringLiteral("\U0001F3F7 \u6807\u7b7e"), this);
+    auto *tagTitle = new QLabel(QStringLiteral("🏷 标签"), this);
     tagTitle->setObjectName("sectionTitle");
     layout->addWidget(tagTitle);
 
@@ -46,22 +48,13 @@ void Sidebar::setupSmartList()
     m_smartList->setHeaderHidden(true);
     m_smartList->setRootIsDecorated(false);
     m_smartList->setIndentation(12);
-    m_smartList->setMaximumHeight(130);
+    m_smartList->setMaximumHeight(34);
 
-    auto addItem = [&](const QString &text) {
-        auto *item = new QTreeWidgetItem(m_smartList);
-        item->setText(0, text);
-        return item;
-    };
-    addItem(QStringLiteral("\U0001F4DA \u6240\u6709\u94fe\u63a5"));
-    addItem(QStringLiteral("\u23F0 \u6700\u8fd1\u6dfb\u52a0"));
-    addItem(QStringLiteral("\U0001F525 \u9891\u7e41\u8bbf\u95ee"));
+    auto *item = new QTreeWidgetItem(m_smartList);
+    item->setText(0, QStringLiteral("📚 所有链接"));
 
-    connect(m_smartList, &QTreeWidget::itemClicked, this, [this](QTreeWidgetItem *item, int) {
-        QString t = item->text(0);
-        if (t.contains("\u6240\u6709")) emit allLinksRequested();
-        else if (t.contains("\u6700\u8fd1")) emit recentLinksRequested();
-        else if (t.contains("\u9891\u7e41")) emit frequentLinksRequested();
+    connect(m_smartList, &QTreeWidget::itemClicked, this, [this](QTreeWidgetItem *, int) {
+        emit allLinksRequested();
     });
 }
 
@@ -71,10 +64,33 @@ void Sidebar::setupFolderTree()
     m_folderTree->setHeaderHidden(true);
     m_folderTree->setAnimated(true);
     m_folderTree->setIndentation(14);
+    m_folderTree->setContextMenuPolicy(Qt::CustomContextMenu);
 
     connect(m_folderTree, &QTreeWidget::itemClicked, this, [this](QTreeWidgetItem *item, int) {
         int fid = item->data(0, Qt::UserRole).toInt();
         emit folderSelected(fid);
+    });
+
+    connect(m_folderTree, &QTreeWidget::customContextMenuRequested, this, [this](const QPoint &pos) {
+        QTreeWidgetItem *item = m_folderTree->itemAt(pos);
+        QMenu menu(this);
+        if (item) {
+            int fid = item->data(0, Qt::UserRole).toInt();
+            QAction *newAct = menu.addAction(QStringLiteral("📄 新建子文件夹"));
+            QAction *renameAct = menu.addAction(QStringLiteral("✏ 重命名"));
+            menu.addSeparator();
+            QAction *delAct = menu.addAction(QStringLiteral("🗑 删除"));
+
+            QAction *chosen = menu.exec(m_folderTree->viewport()->mapToGlobal(pos));
+            if (chosen == newAct)      emit folderNewRequested(fid);
+            else if (chosen == renameAct) emit folderRenameRequested(fid);
+            else if (chosen == delAct)   emit folderDeleteRequested(fid);
+        } else {
+            // 在空白处右键：新建根文件夹
+            QAction *newAct = menu.addAction(QStringLiteral("📄 新建文件夹"));
+            if (menu.exec(m_folderTree->viewport()->mapToGlobal(pos)) == newAct)
+                emit folderNewRequested(-1);
+        }
     });
 }
 
@@ -83,10 +99,21 @@ void Sidebar::setupTagList()
     m_tagList = new QListWidget(this);
     m_tagList->setObjectName("tagList");
     m_tagList->setMaximumHeight(200);
+    m_tagList->setContextMenuPolicy(Qt::CustomContextMenu);
 
     connect(m_tagList, &QListWidget::itemClicked, this, [this](QListWidgetItem *item) {
         int tid = item->data(Qt::UserRole).toInt();
         emit tagSelected(tid);
+    });
+
+    connect(m_tagList, &QListWidget::customContextMenuRequested, this, [this](const QPoint &pos) {
+        QListWidgetItem *item = m_tagList->itemAt(pos);
+        if (!item) return;
+        int tid = item->data(Qt::UserRole).toInt();
+        QMenu menu(this);
+        QAction *delAct = menu.addAction(QStringLiteral("🗑 删除标签"));
+        if (menu.exec(m_tagList->viewport()->mapToGlobal(pos)) == delAct)
+            emit tagDeleteRequested(tid);
     });
 }
 

@@ -61,6 +61,11 @@ bool DatabaseManager::initialize(const QString &dbPath)
         qCritical() << "[DB] 建表失败";
         return false;
     }
+    if (!migrateIfNeeded())
+    {
+        qCritical() << "[DB] 迁移失败";
+        return false;
+    }
 
     m_initialized = true;
     qInfo() << "[DB] 数据库初始化完成";
@@ -145,7 +150,14 @@ bool DatabaseManager::executeSchema()
 
 bool DatabaseManager::migrateIfNeeded()
 {
-    // 预留：后续版本迁移逻辑
-    // 当前版本为 1，后续增加版本号时在此处添加迁移逻辑
+    // 迁移 v1 -> v2: 添加 sort_order 列
+    QSqlQuery query(m_db);
+    if (!query.exec("ALTER TABLE links ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0"))
+    {
+        // 列已存在则忽略（首次运行 schema.sql 已包含该列）
+        QString err = query.lastError().text();
+        if (!err.contains("duplicate column") && !err.contains("already exists"))
+            qWarning() << "[DB] 迁移警告 (sort_order):" << err;
+    }
     return true;
 }

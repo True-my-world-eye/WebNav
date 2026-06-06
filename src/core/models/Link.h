@@ -1,4 +1,4 @@
-﻿// Link.h — 链接数据模型
+// Link.h — 链接数据模型
 // 表示一条被收藏的网页链接，包含标题、URL、所属文件夹、访问统计等核心字段
 
 #pragma once
@@ -22,6 +22,7 @@ struct Link
     bool isBroken = false;              // 是否已失效（死链检测结果）
     QDateTime createdAt;                // 创建时间
     QDateTime updatedAt;                // 最后修改时间
+    int sortOrder = 0;                  // 排序序号（手动拖拽排序）
     int syncVersion = 1;                // 同步版本号（冲突检测用）
     QDateTime syncUpdatedAt;            // 同步专用时间戳
 

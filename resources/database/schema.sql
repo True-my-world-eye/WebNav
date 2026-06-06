@@ -1,6 +1,6 @@
 ﻿-- ============================================================
 -- WebNav 数据库初始化脚本
--- 版本: 1.0.0
+-- 版本: 2.0.0
 -- ============================================================
 
 PRAGMA journal_mode = WAL;
@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS links (
     visit_count     INTEGER NOT NULL DEFAULT 0,
     last_visited_at TEXT,
     is_broken       INTEGER NOT NULL DEFAULT 0,
+    sort_order      INTEGER NOT NULL DEFAULT 0,
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
     sync_version    INTEGER NOT NULL DEFAULT 1,
@@ -75,4 +76,4 @@ CREATE INDEX IF NOT EXISTS idx_links_created ON links(created_at);
 CREATE INDEX IF NOT EXISTS idx_link_fields_link ON link_fields(link_id);
 
 -- 初始版本记录
-INSERT OR IGNORE INTO schema_version (version) VALUES (1);
+INSERT OR IGNORE INTO schema_version (version) VALUES (2);

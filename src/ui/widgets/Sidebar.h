@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <QWidget>
 #include <QTreeWidget>
 #include <QListWidget>
@@ -17,10 +17,12 @@ public:
 
 signals:
     void allLinksRequested();
-    void recentLinksRequested();
-    void frequentLinksRequested();
     void folderSelected(int folderId);
     void tagSelected(int tagId);
+    void folderNewRequested(int parentId);
+    void folderRenameRequested(int folderId);
+    void folderDeleteRequested(int folderId);
+    void tagDeleteRequested(int tagId);
 
 private:
     void setupSmartList();

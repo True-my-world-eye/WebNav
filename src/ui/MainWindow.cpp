@@ -42,30 +42,35 @@ MainWindow::MainWindow(ILinkRepository *linkRepo, IFolderRepository *folderRepo,
     splitter->setSizes({220, 880});
     setCentralWidget(splitter);
 
-    // Both views: disable direct editing, enable context menu
+    // ── 列表视图设置：只读 + 右键菜单 + 拖拽排序 ──
     m_listView->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_listView->setContextMenuPolicy(Qt::CustomContextMenu);
+    m_listView->setDragEnabled(true);
+    m_listView->setAcceptDrops(true);
+    m_listView->setDropIndicatorShown(true);
+    m_listView->setDragDropMode(QAbstractItemView::InternalMove);
+
+    // ── 卡片视图设置：只读 + 右键菜单 ──
     m_cardView->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_cardView->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    // Signals
+    // ── 信号连接 ──
     connect(m_listView, &LinkListView::linkDoubleClicked, this, &MainWindow::onDoubleClicked);
     connect(m_cardView, &LinkCardView::linkDoubleClicked, this, &MainWindow::onDoubleClicked);
     connect(m_listView, &QWidget::customContextMenuRequested, this, &MainWindow::showContextMenu);
     connect(m_cardView, &QWidget::customContextMenuRequested, this, &MainWindow::showContextMenu);
+
     connect(m_sidebar, &Sidebar::allLinksRequested, this, &MainWindow::refreshLinks);
-    connect(m_sidebar, &Sidebar::recentLinksRequested, this, [this]() {
-        buildLinkModel(m_linkRepo->getRecent(50));
-    });
-    connect(m_sidebar, &Sidebar::frequentLinksRequested, this, [this]() {
-        buildLinkModel(m_linkRepo->getMostVisited(50));
-    });
     connect(m_sidebar, &Sidebar::folderSelected, this, [this](int fid) {
         buildLinkModel(m_linkRepo->getByFolder(fid));
     });
     connect(m_sidebar, &Sidebar::tagSelected, this, [this](int) {
         refreshLinks();
     });
+    connect(m_sidebar, &Sidebar::folderNewRequested, this, &MainWindow::onNewFolder);
+    connect(m_sidebar, &Sidebar::folderRenameRequested, this, &MainWindow::onRenameFolder);
+    connect(m_sidebar, &Sidebar::folderDeleteRequested, this, &MainWindow::onDeleteFolder);
+    connect(m_sidebar, &Sidebar::tagDeleteRequested, this, &MainWindow::onDeleteTag);
 
     refreshLinks();
 }
@@ -133,7 +138,6 @@ void MainWindow::setupShortcuts()
         if (!m_isCardView) toggleView();
     });
 
-    // Delete shortcut
     auto *delSC = new QShortcut(QKeySequence("Delete"), this);
     connect(delSC, &QShortcut::activated, this, &MainWindow::onDeleteLink);
 }
@@ -141,11 +145,11 @@ void MainWindow::setupShortcuts()
 void MainWindow::buildLinkModel(const QVector<Link> &links)
 {
     delete m_linkModel;
-    m_linkModel = new QStandardItemModel(links.size(), 5, this);
+    // 4 列：标题 / URL / 文件夹 / 标签（去掉时间列）
+    m_linkModel = new QStandardItemModel(links.size(), 4, this);
     m_linkModel->setHorizontalHeaderLabels({
         QStringLiteral("\u6807\u9898"), QStringLiteral("URL"),
-        QStringLiteral("\u6587\u4ef6\u5939"), QStringLiteral("\u6807\u7b7e"),
-        QStringLiteral("\u65f6\u95f4")});
+        QStringLiteral("\u6587\u4ef6\u5939"), QStringLiteral("\u6807\u7b7e")});
 
     QMap<int, QString> folderNames;
     if (m_folderRepo) {
@@ -156,39 +160,35 @@ void MainWindow::buildLinkModel(const QVector<Link> &links)
     for (int i = 0; i < links.size(); i++)
     {
         const auto &link = links[i];
-        auto *titleItem = new QStandardItem(link.title.isEmpty() ? link.url : link.title);
-        titleItem->setData(link.id, Qt::UserRole);
-        titleItem->setToolTip(link.url);
-        titleItem->setFlags(titleItem->flags() & ~Qt::ItemIsEditable);
-        m_linkModel->setItem(i, 0, titleItem);
 
-        auto *urlItem = new QStandardItem(link.url);
-        urlItem->setFlags(urlItem->flags() & ~Qt::ItemIsEditable);
-        m_linkModel->setItem(i, 1, urlItem);
+        // 每列都存入 linkId 到 Qt::UserRole，确保点击任意位置都能识别所属链接
+        auto makeItem = [&](const QString &text) -> QStandardItem* {
+            auto *item = new QStandardItem(text);
+            item->setData(link.id, Qt::UserRole);
+            item->setFlags(item->flags() & ~Qt::ItemIsEditable);
+            item->setToolTip(text);
+            return item;
+        };
+
+        m_linkModel->setItem(i, 0, makeItem(link.title.isEmpty() ? link.url : link.title));
+        m_linkModel->setItem(i, 1, makeItem(link.url));
 
         QString folderName = folderNames.value(link.folderId);
-        auto *folderItem = new QStandardItem(folderName);
-        folderItem->setFlags(folderItem->flags() & ~Qt::ItemIsEditable);
-        m_linkModel->setItem(i, 2, folderItem);
+        m_linkModel->setItem(i, 2, makeItem(folderName));
 
         QStringList tagNames;
         if (m_tagRepo) {
             for (const auto &t : m_tagRepo->getTagsForLink(link.id))
                 tagNames << t.name;
         }
-        auto *tagItem = new QStandardItem(tagNames.join(", "));
-        tagItem->setFlags(tagItem->flags() & ~Qt::ItemIsEditable);
-        m_linkModel->setItem(i, 3, tagItem);
-
-        QString timeStr = link.createdAt.isValid()
-            ? link.createdAt.toString("yyyy-MM-dd") : QString();
-        auto *timeItem = new QStandardItem(timeStr);
-        timeItem->setFlags(timeItem->flags() & ~Qt::ItemIsEditable);
-        m_linkModel->setItem(i, 4, timeItem);
+        m_linkModel->setItem(i, 3, makeItem(tagNames.join(", ")));
     }
 
     m_listView->setLinkData(m_linkModel);
     m_cardView->setLinkData(m_linkModel);
+
+    // 拖拽排序完成后触发重新排序
+    connect(m_linkModel, &QStandardItemModel::rowsMoved, this, &MainWindow::onLinksReordered);
 
     statusBar()->showMessage(
         QStringLiteral("\u5171 %1 \u6761\u94fe\u63a5").arg(links.size()));
@@ -251,15 +251,11 @@ void MainWindow::toggleView()
 int MainWindow::selectedLinkId() const
 {
     int viewIdx = m_viewStack->currentIndex();
-    if (viewIdx == 0) {
-        auto sel = m_listView->selectionModel();
-        if (sel && sel->hasSelection())
-            return sel->currentIndex().data(Qt::UserRole).toInt();
-    } else {
-        auto sel = m_cardView->selectionModel();
-        if (sel && sel->hasSelection())
-            return sel->currentIndex().data(Qt::UserRole).toInt();
-    }
+    QItemSelectionModel *sel = (viewIdx == 0)
+        ? m_listView->selectionModel()
+        : m_cardView->selectionModel();
+    if (sel && sel->hasSelection())
+        return sel->currentIndex().data(Qt::UserRole).toInt();
     return -1;
 }
 
@@ -279,7 +275,6 @@ QVector<int> MainWindow::selectedLinkIds() const
 
 void MainWindow::onDoubleClicked(int linkId)
 {
-    // Double-click opens edit dialog
     auto opt = m_linkRepo->getById(linkId);
     if (!opt.has_value()) return;
     Link link = opt.value();
@@ -287,17 +282,15 @@ void MainWindow::onDoubleClicked(int linkId)
     LinkEditDialog dialog(this);
     dialog.setWindowTitle(QStringLiteral("\u7f16\u8f91\u94fe\u63a5"));
     dialog.setLink(link);
+    dialog.setLinkTime(link.createdAt, link.updatedAt);
     dialog.setFolders(m_folderRepo->getAll());
     dialog.setTags(m_tagRepo->getAll());
     dialog.fieldEditor()->setFields(m_linkRepo->getLinkFields(linkId));
 
-    // Pre-select tags
-    if (m_tagRepo) {
-        QVector<int> tagIds;
-        for (const auto &t : m_tagRepo->getTagsForLink(linkId))
-            tagIds.append(t.id);
-        dialog.tagSelector()->setSelectedTagIds(tagIds);
-    }
+    QVector<int> tagIds;
+    for (const auto &t : m_tagRepo->getTagsForLink(linkId))
+        tagIds.append(t.id);
+    dialog.tagSelector()->setSelectedTagIds(tagIds);
 
     connect(&dialog, &LinkEditDialog::createNewTag, this, [this](const QString &name) {
         Tag t; t.name = name;
@@ -308,10 +301,12 @@ void MainWindow::onDoubleClicked(int linkId)
     {
         Link updated = dialog.link();
         updated.id = linkId;
+        updated.sortOrder = link.sortOrder;
         updated.createdAt = link.createdAt;
+        updated.visitCount = link.visitCount;
+        updated.lastVisitedAt = link.lastVisitedAt;
         m_linkRepo->update(updated);
 
-        // Update tags
         if (m_tagRepo) {
             for (const auto &t : m_tagRepo->getTagsForLink(linkId))
                 m_tagRepo->removeTagFromLink(linkId, t.id);
@@ -319,7 +314,6 @@ void MainWindow::onDoubleClicked(int linkId)
                 m_tagRepo->addTagToLink(linkId, tagId);
         }
 
-        // Update fields
         auto fields = dialog.linkFields();
         for (auto &f : fields) f.linkId = linkId;
         m_linkRepo->saveLinkFields(linkId, fields);
@@ -421,6 +415,19 @@ void MainWindow::showContextMenu(const QPoint &pos)
     }
 }
 
+void MainWindow::onLinksReordered()
+{
+    if (!m_linkModel) return;
+    QVector<QPair<int,int>> orders;
+    for (int i = 0; i < m_linkModel->rowCount(); i++)
+    {
+        int linkId = m_linkModel->item(i, 0)->data(Qt::UserRole).toInt();
+        if (linkId > 0) orders.append({linkId, i});
+    }
+    if (!orders.isEmpty())
+        m_linkRepo->reorderLinks(orders);
+}
+
 void MainWindow::onNewFolder(int parentId)
 {
     bool ok;
@@ -431,6 +438,7 @@ void MainWindow::onNewFolder(int parentId)
         Folder f; f.name = name.trimmed(); f.parentId = parentId;
         m_folderRepo->insert(f);
         m_sidebar->refresh();
+        refreshLinks();
     }
 }
 
@@ -457,6 +465,23 @@ void MainWindow::onDeleteFolder(int folderId)
         QMessageBox::Yes | QMessageBox::No);
     if (ret == QMessageBox::Yes) {
         m_folderRepo->remove(folderId);
+        m_sidebar->refresh();
+        refreshLinks();
+    }
+}
+
+void MainWindow::onDeleteTag(int tagId)
+{
+    QString tagName;
+    auto opt = m_tagRepo->getById(tagId);
+    if (opt.has_value()) tagName = opt->name;
+
+    auto ret = QMessageBox::question(this,
+        QStringLiteral("\u5220\u9664\u6807\u7b7e"),
+        QStringLiteral("\u786e\u5b9a\u8981\u5220\u9664\u6807\u7b7e\u201c%1\u201d\u5417\uff1f\u8be5\u6807\u7b7e\u5c06\u4ece\u6240\u6709\u94fe\u63a5\u4e2d\u79fb\u9664\u3002").arg(tagName),
+        QMessageBox::Yes | QMessageBox::No);
+    if (ret == QMessageBox::Yes) {
+        m_tagRepo->remove(tagId);
         m_sidebar->refresh();
         refreshLinks();
     }

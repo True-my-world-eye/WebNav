@@ -4,6 +4,7 @@
 #include <QLabel>
 #include <QMessageBox>
 #include <QUrl>
+#include <QLabel>
 
 LinkEditDialog::LinkEditDialog(QWidget *parent) : QDialog(parent) {
     setupUi();
@@ -57,6 +58,15 @@ void LinkEditDialog::setupUi()
     m_notesEdit->setMaximumHeight(80);
     main->addWidget(m_notesEdit);
 
+    // 时间信息
+    auto *timeLay = new QHBoxLayout();
+    m_timeLabel = new QLabel(this);
+    m_timeLabel->setObjectName("timeInfo");
+    m_timeLabel->setStyleSheet("color: #888; font-size: 11px;");
+    timeLay->addWidget(m_timeLabel);
+    timeLay->addStretch();
+    main->addLayout(timeLay);
+
     // 附加字段
     m_fieldEditor = new FieldEditor(this);
     main->addWidget(m_fieldEditor);
@@ -108,6 +118,18 @@ void LinkEditDialog::setFolders(const QVector<Folder> &folders)
 void LinkEditDialog::setTags(const QVector<Tag> &tags)
 {
     m_tagSelector->setAvailableTags(tags);
+}
+
+void LinkEditDialog::setLinkTime(const QDateTime &created, const QDateTime &updated)
+{
+    QString text;
+    if (created.isValid())
+        text += QStringLiteral("创建: %1").arg(created.toString("yyyy-MM-dd HH:mm"));
+    if (updated.isValid() && updated != created) {
+        if (!text.isEmpty()) text += QStringLiteral("  |  ");
+        text += QStringLiteral("更新: %1").arg(updated.toString("yyyy-MM-dd HH:mm"));
+    }
+    m_timeLabel->setText(text);
 }
 
 void LinkEditDialog::onSave()

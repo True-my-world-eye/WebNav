@@ -1,9 +1,10 @@
-﻿#pragma once
+#pragma once
 #include <QDialog>
 #include <QLineEdit>
 #include <QComboBox>
 #include <QTextEdit>
 #include <QPushButton>
+#include <QLabel>
 #include "models/Link.h"
 #include "models/Folder.h"
 #include "models/Tag.h"
@@ -17,6 +18,7 @@ class LinkEditDialog : public QDialog
 public:
     explicit LinkEditDialog(QWidget *parent = nullptr);
     void setLink(const Link &link);
+    void setLinkTime(const QDateTime &created, const QDateTime &updated);
     Link link() const;
     QVector<int> selectedTagIds() const { return m_tagSelector->selectedTagIds(); }
     QVector<LinkField> linkFields() const { return m_fieldEditor->fields(); }
@@ -30,6 +32,7 @@ private slots:
     void onSave();
 private:
     void setupUi();
+    QLabel      *m_timeLabel;
     QLineEdit   *m_urlInput;
     QLineEdit   *m_titleInput;
     QComboBox   *m_folderCombo;

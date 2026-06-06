@@ -31,9 +31,11 @@ private slots:
     void onNewFolder(int parentId);
     void onRenameFolder(int folderId);
     void onDeleteFolder(int folderId);
+    void onDeleteTag(int tagId);
     void onEditLink();
     void onOpenLink();
     void onDeleteLink();
+    void onLinksReordered();
     void showContextMenu(const QPoint &pos);
     void onDoubleClicked(int linkId);
 

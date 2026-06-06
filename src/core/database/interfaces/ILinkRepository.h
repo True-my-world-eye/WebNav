@@ -1,5 +1,6 @@
-﻿#pragma once
+#pragma once
 #include <QVector>
+#include <QPair>
 #include <QString>
 #include <QDateTime>
 #include <optional>
@@ -23,6 +24,7 @@ public:
     virtual bool update(const Link &link) = 0;
     virtual bool remove(int id) = 0;
     virtual bool removeMultiple(const QVector<int> &ids) = 0;
+    virtual bool reorderLinks(const QVector<QPair<int,int>> &orders) = 0;
 
     virtual QVector<Link> getChangedSince(const QDateTime &since) = 0;
     virtual int count() = 0;

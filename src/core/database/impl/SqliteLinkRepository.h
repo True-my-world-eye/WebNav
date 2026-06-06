@@ -19,6 +19,7 @@ public:
     bool update(const Link &link) override;
     bool remove(int id) override;
     bool removeMultiple(const QVector<int> &ids) override;
+    bool reorderLinks(const QVector<QPair<int,int>> &orders) override;
     QVector<Link> getChangedSince(const QDateTime &since) override;
     int count() override;
     int brokenCount() override;

@@ -29,6 +29,7 @@ Link SqliteLinkRepository::rowToLink(const QSqlQuery &query) const
     link.isBroken        = query.value("is_broken").toBool();
     link.createdAt       = QDateTime::fromString(query.value("created_at").toString(), Qt::ISODate);
     link.updatedAt       = QDateTime::fromString(query.value("updated_at").toString(), Qt::ISODate);
+    link.sortOrder       = query.value("sort_order").toInt();
     link.syncVersion     = query.value("sync_version").toInt();
     link.syncUpdatedAt   = QDateTime::fromString(query.value("sync_updated_at").toString(), Qt::ISODate);
     return link;
@@ -40,7 +41,7 @@ QVector<Link> SqliteLinkRepository::getAll()
 {
     QVector<Link> results;
     QSqlQuery query(m_db);
-    query.exec("SELECT * FROM links ORDER BY created_at DESC");
+    query.exec("SELECT * FROM links ORDER BY sort_order ASC, created_at DESC");
     while (query.next())
         results.append(rowToLink(query));
     return results;
@@ -60,7 +61,7 @@ QVector<Link> SqliteLinkRepository::getByFolder(int folderId)
 {
     QVector<Link> results;
     QSqlQuery query(m_db);
-    query.prepare("SELECT * FROM links WHERE folder_id = ? ORDER BY created_at DESC");
+    query.prepare("SELECT * FROM links WHERE folder_id = ? ORDER BY sort_order ASC, created_at DESC");
     query.addBindValue(folderId);
     if (query.exec())
     {
@@ -74,7 +75,7 @@ QVector<Link> SqliteLinkRepository::search(const QString &keyword)
 {
     QVector<Link> results;
     QSqlQuery query(m_db);
-    query.prepare("SELECT * FROM links WHERE title LIKE ? OR url LIKE ? OR description LIKE ? ORDER BY created_at DESC");
+    query.prepare("SELECT * FROM links WHERE title LIKE ? OR url LIKE ? OR description LIKE ? ORDER BY sort_order ASC, created_at DESC");
     QString pattern = "%" + keyword + "%";
     query.addBindValue(pattern);
     query.addBindValue(pattern);
@@ -91,7 +92,7 @@ QVector<Link> SqliteLinkRepository::getRecent(int limit)
 {
     QVector<Link> results;
     QSqlQuery query(m_db);
-    query.prepare("SELECT * FROM links ORDER BY created_at DESC LIMIT ?");
+    query.prepare("SELECT * FROM links ORDER BY sort_order ASC, created_at DESC LIMIT ?");
     query.addBindValue(limit);
     if (query.exec())
     {
@@ -132,8 +133,8 @@ int SqliteLinkRepository::insert(const Link &link)
     QSqlQuery query(m_db);
     query.prepare(R"(
         INSERT INTO links (folder_id, title, url, description, notes, favicon_path, thumbnail_path,
-                          visit_count, last_visited_at, is_broken, created_at, updated_at, sync_version)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime("now"), datetime("now"), ?)
+                          visit_count, last_visited_at, is_broken, sort_order, created_at, updated_at, sync_version)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime("now"), datetime("now"), ?)
     )");
     query.addBindValue(link.folderId > 0 ? QVariant(link.folderId) : QVariant());
     query.addBindValue(link.title.isNull() ? QString("") : link.title);
@@ -145,6 +146,7 @@ int SqliteLinkRepository::insert(const Link &link)
     query.addBindValue(link.visitCount);
     query.addBindValue(link.lastVisitedAt.isValid() ? QVariant(link.lastVisitedAt.toString(Qt::ISODate)) : QVariant());
     query.addBindValue(link.isBroken ? 1 : 0);
+    query.addBindValue(link.sortOrder);
     query.addBindValue(link.syncVersion);
 
     if (query.exec())
@@ -160,7 +162,7 @@ bool SqliteLinkRepository::update(const Link &link)
     query.prepare(R"(
         UPDATE links SET folder_id=?, title=?, url=?, description=?, notes=?,
                          favicon_path=?, thumbnail_path=?, visit_count=?,
-                         last_visited_at=?, is_broken=?, updated_at=datetime("now"),
+                         last_visited_at=?, is_broken=?, sort_order=?, updated_at=datetime("now"),
                          sync_version=?
         WHERE id=?
     )");
@@ -174,6 +176,7 @@ bool SqliteLinkRepository::update(const Link &link)
     query.addBindValue(link.visitCount);
     query.addBindValue(link.lastVisitedAt.isValid() ? QVariant(link.lastVisitedAt.toString(Qt::ISODate)) : QVariant());
     query.addBindValue(link.isBroken ? 1 : 0);
+    query.addBindValue(link.sortOrder);
     query.addBindValue(link.syncVersion);
     query.addBindValue(link.id);
 
@@ -239,6 +242,20 @@ int SqliteLinkRepository::brokenCount()
     if (query.exec("SELECT COUNT(*) FROM links WHERE is_broken = 1") && query.next())
         return query.value(0).toInt();
     return 0;
+}
+
+bool SqliteLinkRepository::reorderLinks(const QVector<QPair<int,int>> &orders)
+{
+    m_db.transaction();
+    QSqlQuery query(m_db);
+    query.prepare("UPDATE links SET sort_order=? WHERE id=?");
+    for (const auto &pair : orders)
+    {
+        query.addBindValue(pair.second);
+        query.addBindValue(pair.first);
+        if (!query.exec()) { m_db.rollback(); return false; }
+    }
+    return m_db.commit();
 }
 
 // ── 附加字段存储 ──────────────────────────────────────────
