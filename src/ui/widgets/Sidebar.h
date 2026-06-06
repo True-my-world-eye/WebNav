@@ -25,11 +25,9 @@ signals:
     void tagDeleteRequested(int tagId);
 
 private:
-    void setupSmartList();
     void setupFolderTree();
     void setupTagList();
 
-    QTreeWidget *m_smartList;
     QTreeWidget *m_folderTree;
     QListWidget *m_tagList;
     IFolderRepository *m_folderRepo = nullptr;

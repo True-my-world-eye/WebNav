@@ -1,4 +1,4 @@
-﻿// SettingsDialog.cpp
+// SettingsDialog.cpp
 
 #include "SettingsDialog.h"
 #include <QVBoxLayout>
@@ -7,6 +7,8 @@
 #include <QPushButton>
 #include <QGroupBox>
 #include <QFormLayout>
+#include <QApplication>
+#include <QFile>
 
 SettingsDialog::SettingsDialog(QWidget *parent)
     : QDialog(parent)
@@ -30,6 +32,22 @@ void SettingsDialog::setupUi()
     m_themeCombo->addItem(QStringLiteral("\u6df1\u8272"), "dark");
     appearanceLayout->addRow(QStringLiteral("\u4e3b\u9898:"), m_themeCombo);
 
+    // 主题切换即时生效
+    connect(m_themeCombo, &QComboBox::currentIndexChanged, this, [this]() {
+        QString key = m_themeCombo->currentData().toString();
+        QString qssFile;
+        if (key == "system" || key == "light")
+            qssFile = QStringLiteral(":/themes/light.qss");
+        else
+            qssFile = QStringLiteral(":/themes/dark.qss");
+
+        QFile file(qssFile);
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            qApp->setStyleSheet(file.readAll());
+            file.close();
+        }
+    });
+
     mainLayout->addWidget(appearanceGroup);
 
     mainLayout->addStretch();
@@ -42,4 +60,3 @@ void SettingsDialog::setupUi()
     btnLayout->addWidget(closeBtn);
     mainLayout->addLayout(btnLayout);
 }
-

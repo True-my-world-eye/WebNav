@@ -49,6 +49,7 @@ MainWindow::MainWindow(ILinkRepository *linkRepo, IFolderRepository *folderRepo,
     m_listView->setAcceptDrops(true);
     m_listView->setDropIndicatorShown(true);
     m_listView->setDragDropMode(QAbstractItemView::InternalMove);
+    m_listView->setDragDropOverwriteMode(false);
 
     // ── 卡片视图设置：只读 + 右键菜单 ──
     m_cardView->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -60,7 +61,6 @@ MainWindow::MainWindow(ILinkRepository *linkRepo, IFolderRepository *folderRepo,
     connect(m_listView, &QWidget::customContextMenuRequested, this, &MainWindow::showContextMenu);
     connect(m_cardView, &QWidget::customContextMenuRequested, this, &MainWindow::showContextMenu);
 
-    connect(m_sidebar, &Sidebar::allLinksRequested, this, &MainWindow::refreshLinks);
     connect(m_sidebar, &Sidebar::folderSelected, this, [this](int fid) {
         buildLinkModel(m_linkRepo->getByFolder(fid));
     });
@@ -182,12 +182,20 @@ void MainWindow::buildLinkModel(const QVector<Link> &links)
                 tagNames << t.name;
         }
         m_linkModel->setItem(i, 3, makeItem(tagNames.join(", ")));
+        m_linkModel->setItem(i, 4, makeItem(link.notes.left(60)));
     }
 
     m_listView->setLinkData(m_linkModel);
     m_cardView->setLinkData(m_linkModel);
 
-    // 拖拽排序完成后触发重新排序
+    // 设置列宽
+    if (m_linkModel->columnCount() >= 4) {
+        m_listView->setColumnWidth(1, 220);
+        m_listView->setColumnWidth(2, 100);
+        m_listView->setColumnWidth(3, 120);
+    }
+
+// 拖拽排序完成后触发重新排序
     connect(m_linkModel, &QStandardItemModel::rowsMoved, this, &MainWindow::onLinksReordered);
 
     statusBar()->showMessage(

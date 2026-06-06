@@ -16,17 +16,14 @@ Sidebar::Sidebar(QWidget *parent) : QWidget(parent)
     setFixedWidth(220);
     setObjectName("sidebar");
 
-    setupSmartList();
-    layout->addWidget(m_smartList);
-
-    auto *folderTitle = new QLabel(QStringLiteral("📁 文件夹"), this);
+    auto *folderTitle = new QLabel(QStringLiteral("\U0001F4C1 \u6587\u4ef6\u5939"), this);
     folderTitle->setObjectName("sectionTitle");
     layout->addWidget(folderTitle);
 
     setupFolderTree();
     layout->addWidget(m_folderTree);
 
-    auto *tagTitle = new QLabel(QStringLiteral("🏷 标签"), this);
+    auto *tagTitle = new QLabel(QStringLiteral("\U0001F3F7 \u6807\u7b7e"), this);
     tagTitle->setObjectName("sectionTitle");
     layout->addWidget(tagTitle);
 
@@ -40,22 +37,6 @@ void Sidebar::setRepositories(IFolderRepository *folderRepo, ITagRepository *tag
     m_folderRepo = folderRepo;
     m_tagRepo = tagRepo;
     refresh();
-}
-
-void Sidebar::setupSmartList()
-{
-    m_smartList = new QTreeWidget(this);
-    m_smartList->setHeaderHidden(true);
-    m_smartList->setRootIsDecorated(false);
-    m_smartList->setIndentation(12);
-    m_smartList->setMaximumHeight(34);
-
-    auto *item = new QTreeWidgetItem(m_smartList);
-    item->setText(0, QStringLiteral("📚 所有链接"));
-
-    connect(m_smartList, &QTreeWidget::itemClicked, this, [this](QTreeWidgetItem *, int) {
-        emit allLinksRequested();
-    });
 }
 
 void Sidebar::setupFolderTree()
@@ -76,18 +57,17 @@ void Sidebar::setupFolderTree()
         QMenu menu(this);
         if (item) {
             int fid = item->data(0, Qt::UserRole).toInt();
-            QAction *newAct = menu.addAction(QStringLiteral("📄 新建子文件夹"));
-            QAction *renameAct = menu.addAction(QStringLiteral("✏ 重命名"));
+            QAction *newAct = menu.addAction(QStringLiteral("\U0001F4C4 \u65b0\u5efa\u5b50\u6587\u4ef6\u5939"));
+            QAction *renameAct = menu.addAction(QStringLiteral("\u270f \u91cd\u547d\u540d"));
             menu.addSeparator();
-            QAction *delAct = menu.addAction(QStringLiteral("🗑 删除"));
+            QAction *delAct = menu.addAction(QStringLiteral("\U0001F5D1 \u5220\u9664"));
 
             QAction *chosen = menu.exec(m_folderTree->viewport()->mapToGlobal(pos));
             if (chosen == newAct)      emit folderNewRequested(fid);
             else if (chosen == renameAct) emit folderRenameRequested(fid);
             else if (chosen == delAct)   emit folderDeleteRequested(fid);
         } else {
-            // 在空白处右键：新建根文件夹
-            QAction *newAct = menu.addAction(QStringLiteral("📄 新建文件夹"));
+            QAction *newAct = menu.addAction(QStringLiteral("\U0001F4C4 \u65b0\u5efa\u6587\u4ef6\u5939"));
             if (menu.exec(m_folderTree->viewport()->mapToGlobal(pos)) == newAct)
                 emit folderNewRequested(-1);
         }
@@ -111,7 +91,7 @@ void Sidebar::setupTagList()
         if (!item) return;
         int tid = item->data(Qt::UserRole).toInt();
         QMenu menu(this);
-        QAction *delAct = menu.addAction(QStringLiteral("🗑 删除标签"));
+        QAction *delAct = menu.addAction(QStringLiteral("\U0001F5D1 \u5220\u9664\u6807\u7b7e"));
         if (menu.exec(m_tagList->viewport()->mapToGlobal(pos)) == delAct)
             emit tagDeleteRequested(tid);
     });
