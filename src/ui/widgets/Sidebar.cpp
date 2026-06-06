@@ -1,34 +1,43 @@
-﻿// Sidebar.cpp
-
-#include "Sidebar.h"
+﻿#include "Sidebar.h"
+#include "database/interfaces/IFolderRepository.h"
+#include "database/interfaces/ITagRepository.h"
+#include "models/Folder.h"
+#include "models/Tag.h"
+#include "ColorUtils.h"
 #include <QVBoxLayout>
 
-Sidebar::Sidebar(QWidget *parent)
-    : QWidget(parent)
+Sidebar::Sidebar(QWidget *parent) : QWidget(parent)
 {
     auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(4, 4, 4, 4);
-    layout->setSpacing(4);
-
+    layout->setContentsMargins(4,4,4,4);
+    layout->setSpacing(2);
     setFixedWidth(220);
     setObjectName("sidebar");
 
-    // 智能列表
     setupSmartList();
     layout->addWidget(m_smartList);
 
-    layout->addSpacing(8);
+    auto *folderTitle = new QLabel(QStringLiteral("\U0001F4C1 \u6587\u4ef6\u5939"), this);
+    folderTitle->setObjectName("sectionTitle");
+    layout->addWidget(folderTitle);
 
-    // 标签标题
-    m_tagLabel = new QLabel(QStringLiteral("\u6807\u7b7e"), this);
-    m_tagLabel->setObjectName("sectionTitle");
-    layout->addWidget(m_tagLabel);
+    setupFolderTree();
+    layout->addWidget(m_folderTree);
 
-    // 标签列表
+    auto *tagTitle = new QLabel(QStringLiteral("\U0001F3F7 \u6807\u7b7e"), this);
+    tagTitle->setObjectName("sectionTitle");
+    layout->addWidget(tagTitle);
+
     setupTagList();
     layout->addWidget(m_tagList);
-
     layout->addStretch();
+}
+
+void Sidebar::setRepositories(IFolderRepository *folderRepo, ITagRepository *tagRepo)
+{
+    m_folderRepo = folderRepo;
+    m_tagRepo = tagRepo;
+    refresh();
 }
 
 void Sidebar::setupSmartList()
@@ -37,31 +46,35 @@ void Sidebar::setupSmartList()
     m_smartList->setHeaderHidden(true);
     m_smartList->setRootIsDecorated(false);
     m_smartList->setIndentation(12);
+    m_smartList->setMaximumHeight(130);
 
-    // 添加导航项
-    auto *allItem = new QTreeWidgetItem(m_smartList);
-    allItem->setText(0, QStringLiteral("\U0001F4DA \u6240\u6709\u94fe\u63a5"));
+    auto addItem = [&](const QString &text) {
+        auto *item = new QTreeWidgetItem(m_smartList);
+        item->setText(0, text);
+        return item;
+    };
+    addItem(QStringLiteral("\U0001F4DA \u6240\u6709\u94fe\u63a5"));
+    addItem(QStringLiteral("\u23F0 \u6700\u8fd1\u6dfb\u52a0"));
+    addItem(QStringLiteral("\U0001F525 \u9891\u7e41\u8bbf\u95ee"));
 
-    auto *recentItem = new QTreeWidgetItem(m_smartList);
-    recentItem->setText(0, QStringLiteral("\u23F0 \u6700\u8fd1\u6dfb\u52a0"));
-
-    auto *freqItem = new QTreeWidgetItem(m_smartList);
-    freqItem->setText(0, QStringLiteral("\U0001F525 \u9891\u7e41\u8bbf\u95ee"));
-
-    auto *brokenItem = new QTreeWidgetItem(m_smartList);
-    brokenItem->setText(0, QStringLiteral("\u274C \u5931\u6548\u94fe\u63a5"));
-
-    // 连接信号：点击导航项发出对应的请求信号
     connect(m_smartList, &QTreeWidget::itemClicked, this, [this](QTreeWidgetItem *item, int) {
-        QString text = item->text(0);
-        if (text.contains(QStringLiteral("\u6240\u6709")))         // 所有链接
-            emit allLinksRequested();
-        else if (text.contains(QStringLiteral("\u6700\u8fd1")))     // 最近添加
-            emit recentLinksRequested();
-        else if (text.contains(QStringLiteral("\u9891\u7e41")))     // 频繁访问
-            emit frequentLinksRequested();
-        else                                                         // 失效链接
-            emit allLinksRequested();  // TODO: emit brokenLinksRequested
+        QString t = item->text(0);
+        if (t.contains("\u6240\u6709")) emit allLinksRequested();
+        else if (t.contains("\u6700\u8fd1")) emit recentLinksRequested();
+        else if (t.contains("\u9891\u7e41")) emit frequentLinksRequested();
+    });
+}
+
+void Sidebar::setupFolderTree()
+{
+    m_folderTree = new QTreeWidget(this);
+    m_folderTree->setHeaderHidden(true);
+    m_folderTree->setAnimated(true);
+    m_folderTree->setIndentation(14);
+
+    connect(m_folderTree, &QTreeWidget::itemClicked, this, [this](QTreeWidgetItem *item, int) {
+        int fid = item->data(0, Qt::UserRole).toInt();
+        emit folderSelected(fid);
     });
 }
 
@@ -69,17 +82,47 @@ void Sidebar::setupTagList()
 {
     m_tagList = new QListWidget(this);
     m_tagList->setObjectName("tagList");
+    m_tagList->setMaximumHeight(200);
 
     connect(m_tagList, &QListWidget::itemClicked, this, [this](QListWidgetItem *item) {
-        int tagId = item->data(Qt::UserRole).toInt();
-        emit tagSelected(tagId);
+        int tid = item->data(Qt::UserRole).toInt();
+        emit tagSelected(tid);
     });
 }
 
 void Sidebar::refresh()
 {
-    // TODO: Phase 1 实现完成后，从数据库读取标签列表并填充 m_tagList
-    // 从 SqliteTagRepository 获取所有标签
-    // 为每个标签创建带颜色的 QListWidgetItem
-}
+    // ── 刷新文件夹树 ──
+    m_folderTree->clear();
+    if (m_folderRepo)
+    {
+        auto roots = m_folderRepo->getRootFolders();
+        std::function<void(int, QTreeWidgetItem*)> addFolders;
+        addFolders = [&](int parentId, QTreeWidgetItem *parent) {
+            auto children = m_folderRepo->getByParent(parentId);
+            for (const auto &f : children)
+            {
+                auto *item = parent
+                    ? new QTreeWidgetItem(parent)
+                    : new QTreeWidgetItem(m_folderTree);
+                item->setText(0, f.name);
+                item->setData(0, Qt::UserRole, f.id);
+                addFolders(f.id, item);
+            }
+        };
+        addFolders(-1, nullptr);
+    }
 
+    // ── 刷新标签列表 ──
+    m_tagList->clear();
+    if (m_tagRepo)
+    {
+        auto tags = m_tagRepo->getAll();
+        for (const auto &tag : tags)
+        {
+            auto *item = new QListWidgetItem(tag.name, m_tagList);
+            item->setData(Qt::UserRole, tag.id);
+            item->setForeground(QColor(tag.color));
+        }
+    }
+}

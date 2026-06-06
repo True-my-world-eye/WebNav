@@ -2,6 +2,7 @@
 #include "../interfaces/ILinkRepository.h"
 #include <QSqlDatabase>
 #include <QSqlQuery>
+#include "LinkField.h"
 
 class SqliteLinkRepository : public ILinkRepository
 {
@@ -21,7 +22,11 @@ public:
     QVector<Link> getChangedSince(const QDateTime &since) override;
     int count() override;
     int brokenCount() override;
+    bool saveLinkFields(int linkId, const QVector<LinkField> &fields) override;
+    QVector<LinkField> getLinkFields(int linkId) override;
+
 private:
     Link rowToLink(const QSqlQuery &query) const;
     QSqlDatabase &m_db;
 };
+

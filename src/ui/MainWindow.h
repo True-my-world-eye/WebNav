@@ -1,10 +1,8 @@
-﻿// MainWindow.h — 应用主窗口
-// 集成工具栏、侧边栏、双视图、状态栏，协调所有 UI 交互
-
-#pragma once
+﻿#pragma once
 #include <QMainWindow>
 #include <QStackedWidget>
-#include <memory>
+#include <QStandardItemModel>
+#include <QAction>
 #include "Sidebar.h"
 #include "SearchBar.h"
 #include "LinkListView.h"
@@ -16,55 +14,39 @@
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
-
 public:
-    explicit MainWindow(ILinkRepository *linkRepo,
-                        IFolderRepository *folderRepo,
-                        ITagRepository *tagRepo,
-                        QWidget *parent = nullptr);
-
+    MainWindow(ILinkRepository *linkRepo, IFolderRepository *folderRepo,
+               ITagRepository *tagRepo, QWidget *parent = nullptr);
     ~MainWindow() override;
 
 private slots:
-    // 新建链接
     void onNewLink();
-
-    // 切换视图
     void toggleView();
-
-    // 搜索
     void onSearch(const QString &keyword);
-
-    // 刷新链接列表
     void refreshLinks();
-
-    // 打开链接
     void openLink(int linkId);
-
-    // 打开设置
     void openSettings();
-
-    // 打开关于
     void openAbout();
+    void onNewFolder(int parentId);
+    void onRenameFolder(int folderId);
+    void onDeleteFolder(int folderId);
 
 private:
     void setupToolBar();
     void setupStatusBar();
     void setupShortcuts();
+    void buildLinkModel(const QVector<Link> &links);
 
-    // 仓库
     ILinkRepository   *m_linkRepo;
     IFolderRepository *m_folderRepo;
     ITagRepository    *m_tagRepo;
 
-    // UI 组件
     Sidebar       *m_sidebar;
     SearchBar     *m_searchBar;
-    QStackedWidget *m_viewStack;     // 列表/卡片视图切换
+    QStackedWidget *m_viewStack;
     LinkListView  *m_listView;
     LinkCardView  *m_cardView;
-
-    // 状态
-    bool m_isCardView = false;      // 当前是否为卡片视图
+    QStandardItemModel *m_linkModel = nullptr;
+    QAction *m_viewAction = nullptr;
+    bool m_isCardView = false;
 };
-

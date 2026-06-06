@@ -12,5 +12,6 @@ target_link_libraries(WebNav_ui_widgets PUBLIC
     Qt6::Core
     Qt6::Widgets
     WebNav_core
+    WebNav_utils
 )
 target_include_directories(WebNav_ui_widgets PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

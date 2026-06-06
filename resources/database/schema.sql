@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS folders (
     name        TEXT NOT NULL,
     parent_id   INTEGER REFERENCES folders(id) ON DELETE CASCADE,
     sort_order  INTEGER NOT NULL DEFAULT 0,
-    created_at  TEXT NOT NULL DEFAULT (datetime("now")),
-    updated_at  TEXT NOT NULL DEFAULT (datetime("now"))
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- 标签表
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS tags (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     name        TEXT NOT NULL UNIQUE,
     color       TEXT NOT NULL DEFAULT "#5B9BD5",
-    created_at  TEXT NOT NULL DEFAULT (datetime("now"))
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- 链接表
@@ -37,8 +37,8 @@ CREATE TABLE IF NOT EXISTS links (
     visit_count     INTEGER NOT NULL DEFAULT 0,
     last_visited_at TEXT,
     is_broken       INTEGER NOT NULL DEFAULT 0,
-    created_at      TEXT NOT NULL DEFAULT (datetime("now")),
-    updated_at      TEXT NOT NULL DEFAULT (datetime("now")),
+    created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
     sync_version    INTEGER NOT NULL DEFAULT 1,
     sync_updated_at TEXT
 );
@@ -59,13 +59,13 @@ CREATE TABLE IF NOT EXISTS link_fields (
     field_type   INTEGER NOT NULL DEFAULT 0,
     is_password  INTEGER NOT NULL DEFAULT 0,
     sort_order   INTEGER NOT NULL DEFAULT 0,
-    created_at   TEXT NOT NULL DEFAULT (datetime("now"))
+    created_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- 数据库版本管理表
 CREATE TABLE IF NOT EXISTS schema_version (
     version     INTEGER PRIMARY KEY,
-    applied_at  TEXT NOT NULL DEFAULT (datetime("now"))
+    applied_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- 索引

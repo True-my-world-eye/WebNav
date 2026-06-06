@@ -1,70 +1,60 @@
-﻿// FolderTreeView.cpp
-
-#include "FolderTreeView.h"
+﻿#include "FolderTreeView.h"
+#include "database/interfaces/IFolderRepository.h"
+#include "models/Folder.h"
 #include <QMenu>
-#include <QHeaderView>
+#include <QInputDialog>
+#include <QMessageBox>
 
-FolderTreeView::FolderTreeView(QWidget *parent)
-    : QTreeWidget(parent)
+FolderTreeView::FolderTreeView(QWidget *parent) : QTreeWidget(parent)
 {
     setHeaderHidden(true);
     setAnimated(true);
     setIndentation(16);
-    setDragEnabled(true);
-    setAcceptDrops(true);
-    setDropIndicatorShown(true);
     setContextMenuPolicy(Qt::CustomContextMenu);
-
-    // 根级"全部文件夹"占位
-    auto *rootItem = new QTreeWidgetItem(this);
-    rootItem->setText(0, QStringLiteral("\U0001F4C1 \u5168\u90e8\u6587\u4ef6\u5939"));
-    rootItem->setData(0, Qt::UserRole, -1);
-
-    connect(this, &QTreeWidget::itemClicked,
-            this, &FolderTreeView::onItemClicked);
-    connect(this, &QTreeWidget::customContextMenuRequested,
-            this, &FolderTreeView::onCustomContextMenu);
+    connect(this, &QTreeWidget::itemClicked, this, [this](QTreeWidgetItem *item, int) {
+        emit folderSelected(item->data(0, Qt::UserRole).toInt());
+    });
+    connect(this, &QTreeWidget::customContextMenuRequested, this, [this](const QPoint &pos) {
+        auto *item = itemAt(pos);
+        int fid = item ? item->data(0, Qt::UserRole).toInt() : -1;
+        QMenu menu;
+        auto *newAct = menu.addAction(QStringLiteral("\u65b0\u5efa\u5b50\u6587\u4ef6\u5939"));
+        if (fid > 0) {
+            menu.addSeparator();
+            auto *renAct = menu.addAction(QStringLiteral("\u91cd\u547d\u540d"));
+            auto *delAct = menu.addAction(QStringLiteral("\u5220\u9664"));
+            connect(renAct, &QAction::triggered, this, [this, fid]() {
+                emit renameFolderRequested(fid);
+            });
+            connect(delAct, &QAction::triggered, this, [this, fid]() {
+                emit deleteFolderRequested(fid);
+            });
+        }
+        connect(newAct, &QAction::triggered, this, [this, fid]() {
+            emit newFolderRequested(fid);
+        });
+        menu.exec(mapToGlobal(pos));
+    });
 }
 
 void FolderTreeView::refresh()
 {
-    // 清除现有节点
     clear();
-
-    // 创建根节点
-    auto *rootItem = new QTreeWidgetItem(this);
-    rootItem->setText(0, QStringLiteral("\U0001F4C1 \u5168\u90e8\u6587\u4ef6\u5939"));
-    rootItem->setData(0, Qt::UserRole, -1);
-
-    // TODO: 从 SqliteFolderRepository 读取文件夹并递归添加到树
-    // addFolderNode(-1, rootItem);
-
+    if (!m_repo) return;
+    addFolderNode(-1, nullptr);
     expandAll();
 }
 
 void FolderTreeView::addFolderNode(int parentFolderId, QTreeWidgetItem *parentItem)
 {
-    Q_UNUSED(parentFolderId)
-    Q_UNUSED(parentItem)
-    // TODO: Phase 1 实现
-    // 从 SqliteFolderRepository 的 getByParent(parentFolderId) 获取子文件夹
-    // 为每个子文件夹创建 QTreeWidgetItem
-    // 递归调用 addFolderNode
+    auto folders = m_repo->getByParent(parentFolderId);
+    for (const auto &f : folders)
+    {
+        auto *item = parentItem
+            ? new QTreeWidgetItem(parentItem)
+            : new QTreeWidgetItem(this);
+        item->setText(0, f.name);
+        item->setData(0, Qt::UserRole, f.id);
+        addFolderNode(f.id, item);
+    }
 }
-
-void FolderTreeView::onItemClicked(QTreeWidgetItem *item, int column)
-{
-    Q_UNUSED(column)
-    int folderId = item->data(0, Qt::UserRole).toInt();
-    emit folderSelected(folderId);
-}
-
-void FolderTreeView::onCustomContextMenu(const QPoint &pos)
-{
-    QTreeWidgetItem *item = itemAt(pos);
-    if (!item) return;
-
-    int folderId = item->data(0, Qt::UserRole).toInt();
-    emit folderContextMenu(folderId, mapToGlobal(pos));
-}
-

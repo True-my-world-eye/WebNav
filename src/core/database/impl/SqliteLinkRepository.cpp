@@ -240,3 +240,53 @@ int SqliteLinkRepository::brokenCount()
         return query.value(0).toInt();
     return 0;
 }
+
+// ── 附加字段存储 ──────────────────────────────────────────
+
+bool SqliteLinkRepository::saveLinkFields(int linkId, const QVector<LinkField> &fields)
+{
+    // 先删除旧字段
+    QSqlQuery del(m_db);
+    del.prepare("DELETE FROM link_fields WHERE link_id = ?");
+    del.addBindValue(linkId);
+    del.exec();
+
+    // 插入新字段
+    m_db.transaction();
+    QSqlQuery ins(m_db);
+    for (const auto &f : fields)
+    {
+        ins.prepare("INSERT INTO link_fields (link_id, field_key, field_value, field_type, is_password, sort_order) "
+                     "VALUES (?,?,?,?,?,?)");
+        ins.addBindValue(linkId);
+        ins.addBindValue(f.fieldKey);
+        ins.addBindValue(f.fieldValue);
+        ins.addBindValue(f.fieldType);
+        ins.addBindValue(f.isPassword ? 1 : 0);
+        ins.addBindValue(f.sortOrder);
+        if (!ins.exec()) { m_db.rollback(); return false; }
+    }
+    return m_db.commit();
+}
+
+QVector<LinkField> SqliteLinkRepository::getLinkFields(int linkId)
+{
+    QVector<LinkField> results;
+    QSqlQuery q(m_db);
+    q.prepare("SELECT * FROM link_fields WHERE link_id = ? ORDER BY sort_order");
+    q.addBindValue(linkId);
+    if (q.exec()) {
+        while (q.next()) {
+            LinkField f;
+            f.id = q.value("id").toInt();
+            f.linkId = q.value("link_id").toInt();
+            f.fieldKey = q.value("field_key").toString();
+            f.fieldValue = q.value("field_value").toString();
+            f.fieldType = q.value("field_type").toInt();
+            f.isPassword = q.value("is_password").toBool();
+            f.sortOrder = q.value("sort_order").toInt();
+            results.append(f);
+        }
+    }
+    return results;
+}
