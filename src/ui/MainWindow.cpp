@@ -67,6 +67,7 @@ MainWindow::MainWindow(ILinkRepository *linkRepo, IFolderRepository *folderRepo,
     connect(m_sidebar, &Sidebar::tagSelected, this, [this](int) {
         refreshLinks();
     });
+    connect(m_sidebar, &Sidebar::folderStructureChanged, this, &MainWindow::refreshLinks);
     connect(m_sidebar, &Sidebar::folderNewRequested, this, &MainWindow::onNewFolder);
     connect(m_sidebar, &Sidebar::folderRenameRequested, this, &MainWindow::onRenameFolder);
     connect(m_sidebar, &Sidebar::folderDeleteRequested, this, &MainWindow::onDeleteFolder);

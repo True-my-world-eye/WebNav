@@ -62,4 +62,5 @@ private:
     QAction *m_openAction = nullptr;
     QAction *m_deleteAction = nullptr;
     bool m_isCardView = false;
+    bool m_isRebuildingModel = false;
 };

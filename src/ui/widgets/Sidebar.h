@@ -17,6 +17,7 @@ public:
 
 signals:
     void allLinksRequested();
+    void folderStructureChanged();
     void folderSelected(int folderId);
     void tagSelected(int tagId);
     void folderNewRequested(int parentId);

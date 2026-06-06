@@ -7,6 +7,9 @@
 #include <QVBoxLayout>
 #include <QMenu>
 #include <QMessageBox>
+#include <QInputDialog>
+#include <QPushButton>
+#include <QHBoxLayout>
 
 Sidebar::Sidebar(QWidget *parent) : QWidget(parent)
 {
@@ -16,16 +19,50 @@ Sidebar::Sidebar(QWidget *parent) : QWidget(parent)
     setFixedWidth(220);
     setObjectName("sidebar");
 
+    auto *folderHeader = new QHBoxLayout();
+    folderHeader->setContentsMargins(0,0,0,0);
     auto *folderTitle = new QLabel(QStringLiteral("\U0001F4C1 \u6587\u4ef6\u5939"), this);
     folderTitle->setObjectName("sectionTitle");
-    layout->addWidget(folderTitle);
+    folderHeader->addWidget(folderTitle);
+    folderHeader->addStretch();
+    auto *folderAddBtn = new QPushButton(QStringLiteral("+"), this);
+    folderAddBtn->setFixedSize(20, 20);
+    folderAddBtn->setToolTip(QStringLiteral("\u65b0\u5efa\u6587\u4ef6\u5939"));
+    connect(folderAddBtn, &QPushButton::clicked, this, [this]() {
+        bool ok;
+        QString name = QInputDialog::getText(this, QStringLiteral("\u65b0\u5efa\u6587\u4ef6\u5939"),
+            QStringLiteral("\u6587\u4ef6\u5939\u540d\u79f0:"), QLineEdit::Normal, "", &ok);
+        if (ok && !name.trimmed().isEmpty()) {
+            Folder f; f.name = name.trimmed();
+            if (m_folderRepo) { m_folderRepo->insert(f); refresh(); emit folderStructureChanged(); }
+        }
+    });
+    folderHeader->addWidget(folderAddBtn);
+    layout->addLayout(folderHeader);
 
     setupFolderTree();
     layout->addWidget(m_folderTree);
 
+    auto *tagHeader = new QHBoxLayout();
+    tagHeader->setContentsMargins(0,0,0,0);
     auto *tagTitle = new QLabel(QStringLiteral("\U0001F3F7 \u6807\u7b7e"), this);
     tagTitle->setObjectName("sectionTitle");
-    layout->addWidget(tagTitle);
+    tagHeader->addWidget(tagTitle);
+    tagHeader->addStretch();
+    auto *tagAddBtn = new QPushButton(QStringLiteral("+"), this);
+    tagAddBtn->setFixedSize(20, 20);
+    tagAddBtn->setToolTip(QStringLiteral("\u65b0\u5efa\u6807\u7b7e"));
+    connect(tagAddBtn, &QPushButton::clicked, this, [this]() {
+        bool ok;
+        QString name = QInputDialog::getText(this, QStringLiteral("\u65b0\u5efa\u6807\u7b7e"),
+            QStringLiteral("\u6807\u7b7e\u540d\u79f0:"), QLineEdit::Normal, "", &ok);
+        if (ok && !name.trimmed().isEmpty()) {
+            Tag t; t.name = name.trimmed();
+            if (m_tagRepo) { m_tagRepo->insert(t); refresh(); emit folderStructureChanged(); }
+        }
+    });
+    tagHeader->addWidget(tagAddBtn);
+    layout->addLayout(tagHeader);
 
     setupTagList();
     layout->addWidget(m_tagList);
