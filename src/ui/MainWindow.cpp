@@ -1,10 +1,10 @@
 ﻿// MainWindow.cpp
 
 #include "MainWindow.h"
-#include "ui/dialogs/LinkEditDialog.h"
-#include "ui/dialogs/SettingsDialog.h"
-#include "ui/dialogs/AboutDialog.h"
-#include "utils/PlatformUtils.h"
+#include "LinkEditDialog.h"
+#include "SettingsDialog.h"
+#include "AboutDialog.h"
+#include "PlatformUtils.h"
 
 #include <QToolBar>
 #include <QPushButton>
@@ -236,3 +236,4 @@ void MainWindow::openAbout()
     AboutDialog dialog(this);
     dialog.exec();
 }
+

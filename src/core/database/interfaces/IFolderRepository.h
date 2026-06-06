@@ -4,7 +4,7 @@
 #pragma once
 #include <QVector>
 #include <optional>
-#include "core/models/Folder.h"
+#include "Folder.h"
 
 class IFolderRepository
 {

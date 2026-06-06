@@ -9,6 +9,7 @@ qt_add_library(WebNav_core_services STATIC
 )
 target_link_libraries(WebNav_core_services PUBLIC
     Qt6::Core
+    Qt6::Gui
     Qt6::Network
     WebNav_core_models
     WebNav_core_database

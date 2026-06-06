@@ -28,3 +28,4 @@ void LinkPreviewPanel::clearPreview()
 {
     hide();
 }
+

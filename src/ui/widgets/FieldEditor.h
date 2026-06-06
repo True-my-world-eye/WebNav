@@ -7,7 +7,7 @@
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QVector>
-#include "core/models/LinkField.h"
+#include "models/LinkField.h"
 
 class FieldEditor : public QWidget
 {
@@ -52,3 +52,4 @@ private:
     };
     static QVector<PresetField> presetFields();
 };
+

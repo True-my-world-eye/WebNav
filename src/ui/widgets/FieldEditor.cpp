@@ -188,3 +188,4 @@ QWidget *FieldEditor::createFieldRow(const QString &key, const QString &value,
     });
     return row;
 }
+

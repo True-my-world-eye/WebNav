@@ -71,3 +71,4 @@ void TagSelector::setSelectedTagIds(const QVector<int> &tagIds)
     Q_UNUSED(tagIds)
     // TODO: 设置已选标签
 }
+

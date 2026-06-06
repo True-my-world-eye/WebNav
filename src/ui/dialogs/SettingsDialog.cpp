@@ -42,3 +42,4 @@ void SettingsDialog::setupUi()
     btnLayout->addWidget(closeBtn);
     mainLayout->addLayout(btnLayout);
 }
+

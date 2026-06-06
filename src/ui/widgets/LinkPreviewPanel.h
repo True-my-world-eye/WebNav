@@ -18,3 +18,4 @@ public:
     // 清除当前预览
     void clearPreview();
 };
+

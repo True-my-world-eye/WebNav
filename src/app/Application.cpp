@@ -1,11 +1,11 @@
 ﻿// Application.cpp
 
 #include "Application.h"
-#include "core/database/DatabaseManager.h"
-#include "core/database/impl/SqliteLinkRepository.h"
-#include "core/database/impl/SqliteFolderRepository.h"
-#include "core/database/impl/SqliteTagRepository.h"
-#include "ui/MainWindow.h"
+#include "DatabaseManager.h"
+#include "impl/SqliteLinkRepository.h"
+#include "impl/SqliteFolderRepository.h"
+#include "impl/SqliteTagRepository.h"
+#include "MainWindow.h"
 
 #include <QApplication>
 #include <QFile>

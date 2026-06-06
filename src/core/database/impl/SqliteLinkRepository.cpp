@@ -135,7 +135,7 @@ int SqliteLinkRepository::insert(const Link &link)
                           visit_count, last_visited_at, is_broken, created_at, updated_at, sync_version)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime("now"), datetime("now"), ?)
     )");
-    query.addBindValue(link.folderId > 0 ? link.folderId : QVariant(QMetaType::Int));
+    query.addBindValue(link.folderId > 0 ? QVariant(link.folderId) : QVariant());
     query.addBindValue(link.title);
     query.addBindValue(link.url);
     query.addBindValue(link.description);
@@ -143,7 +143,7 @@ int SqliteLinkRepository::insert(const Link &link)
     query.addBindValue(link.faviconPath);
     query.addBindValue(link.thumbnailPath);
     query.addBindValue(link.visitCount);
-    query.addBindValue(link.lastVisitedAt.isValid() ? link.lastVisitedAt.toString(Qt::ISODate) : QVariant(QMetaType::QString));
+    query.addBindValue(link.lastVisitedAt.isValid() ? QVariant(link.lastVisitedAt.toString(Qt::ISODate)) : QVariant());
     query.addBindValue(link.isBroken ? 1 : 0);
     query.addBindValue(link.syncVersion);
 
@@ -164,7 +164,7 @@ bool SqliteLinkRepository::update(const Link &link)
                          sync_version=?
         WHERE id=?
     )");
-    query.addBindValue(link.folderId > 0 ? link.folderId : QVariant(QMetaType::Int));
+    query.addBindValue(link.folderId > 0 ? QVariant(link.folderId) : QVariant());
     query.addBindValue(link.title);
     query.addBindValue(link.url);
     query.addBindValue(link.description);
@@ -172,7 +172,7 @@ bool SqliteLinkRepository::update(const Link &link)
     query.addBindValue(link.faviconPath);
     query.addBindValue(link.thumbnailPath);
     query.addBindValue(link.visitCount);
-    query.addBindValue(link.lastVisitedAt.isValid() ? link.lastVisitedAt.toString(Qt::ISODate) : QVariant(QMetaType::QString));
+    query.addBindValue(link.lastVisitedAt.isValid() ? QVariant(link.lastVisitedAt.toString(Qt::ISODate)) : QVariant());
     query.addBindValue(link.isBroken ? 1 : 0);
     query.addBindValue(link.syncVersion);
     query.addBindValue(link.id);

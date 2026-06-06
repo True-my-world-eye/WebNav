@@ -26,3 +26,4 @@ private:
     // 递归添加文件夹节点
     void addFolderNode(int parentFolderId, QTreeWidgetItem *parentItem);
 };
+

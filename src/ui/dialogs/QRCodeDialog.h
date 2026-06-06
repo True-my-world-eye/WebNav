@@ -9,3 +9,4 @@ class QRCodeDialog : public QDialog
 public:
     explicit QRCodeDialog(const QString &url, QWidget *parent = nullptr);
 };
+

@@ -34,3 +34,4 @@ AboutDialog::AboutDialog(QWidget *parent)
     connect(closeBtn, &QPushButton::clicked, this, &QDialog::accept);
     layout->addWidget(closeBtn, 0, Qt::AlignCenter);
 }
+

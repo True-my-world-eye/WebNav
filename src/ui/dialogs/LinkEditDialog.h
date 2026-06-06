@@ -6,11 +6,11 @@
 #include <QLineEdit>
 #include <QComboBox>
 #include <QTextEdit>
-#include "core/models/Link.h"
-#include "core/models/Folder.h"
-#include "core/models/Tag.h"
-#include "ui/widgets/TagSelector.h"
-#include "ui/widgets/FieldEditor.h"
+#include "models/Link.h"
+#include "models/Folder.h"
+#include "models/Tag.h"
+#include "TagSelector.h"
+#include "FieldEditor.h"
 
 class LinkEditDialog : public QDialog
 {
@@ -50,3 +50,4 @@ private:
     Link        m_currentLink;        // 当前正在编辑的链接
     bool        m_editMode = false;   // 是否为编辑模式
 };
+

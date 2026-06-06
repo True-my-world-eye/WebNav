@@ -5,13 +5,13 @@
 #include <QMainWindow>
 #include <QStackedWidget>
 #include <memory>
-#include "ui/widgets/Sidebar.h"
-#include "ui/widgets/SearchBar.h"
-#include "ui/views/LinkListView.h"
-#include "ui/views/LinkCardView.h"
-#include "core/database/interfaces/ILinkRepository.h"
-#include "core/database/interfaces/IFolderRepository.h"
-#include "core/database/interfaces/ITagRepository.h"
+#include "Sidebar.h"
+#include "SearchBar.h"
+#include "LinkListView.h"
+#include "LinkCardView.h"
+#include "database/interfaces/ILinkRepository.h"
+#include "database/interfaces/IFolderRepository.h"
+#include "database/interfaces/ITagRepository.h"
 
 class MainWindow : public QMainWindow
 {
@@ -67,3 +67,4 @@ private:
     // 状态
     bool m_isCardView = false;      // 当前是否为卡片视图
 };
+

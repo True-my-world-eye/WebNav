@@ -27,3 +27,4 @@ public:
 private:
     ViewMode m_viewMode = ListView;
 };
+

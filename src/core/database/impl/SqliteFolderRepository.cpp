@@ -71,7 +71,7 @@ int SqliteFolderRepository::insert(const Folder &folder)
         VALUES (?, ?, ?, datetime("now"), datetime("now"))
     )");
     query.addBindValue(folder.name);
-    query.addBindValue(folder.parentId > 0 ? folder.parentId : QVariant(QMetaType::Int));
+    query.addBindValue(folder.parentId > 0 ? QVariant(folder.parentId) : QVariant());
     query.addBindValue(folder.sortOrder);
     if (query.exec())
         return query.lastInsertId().toInt();
@@ -100,7 +100,7 @@ bool SqliteFolderRepository::moveFolder(int folderId, int newParentId, int newOr
 {
     QSqlQuery query(m_db);
     query.prepare("UPDATE folders SET parent_id=?, sort_order=?, updated_at=datetime(\"now\") WHERE id=?");
-    query.addBindValue(newParentId > 0 ? newParentId : QVariant(QMetaType::Int));
+    query.addBindValue(newParentId > 0 ? QVariant(newParentId) : QVariant());
     query.addBindValue(newOrder);
     query.addBindValue(folderId);
     return query.exec();

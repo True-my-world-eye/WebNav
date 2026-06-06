@@ -7,7 +7,7 @@
 #ifdef Q_OS_WIN
 #include <windows.h>
 #include <wincrypt.h>
-#include <QPixmap>
+
 #pragma comment(lib, "crypt32.lib")
 
 // Windows DPAPI 加密实现

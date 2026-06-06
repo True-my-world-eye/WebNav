@@ -9,3 +9,4 @@ class SyncConfigDialog : public QDialog
 public:
     explicit SyncConfigDialog(QWidget *parent = nullptr);
 };
+

@@ -6,10 +6,11 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QBuffer>
+#include <QImageReader>
 #include <QStandardPaths>
 #include <QNetworkReply>
 #include <QCryptographicHash>
-#include <QImageReader>
+
 #include <QDebug>
 
 FaviconService::FaviconService(QObject *parent)

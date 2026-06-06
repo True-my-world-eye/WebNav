@@ -164,3 +164,4 @@ void LinkEditDialog::onSave()
 
     accept();
 }
+

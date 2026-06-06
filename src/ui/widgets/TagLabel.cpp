@@ -32,3 +32,4 @@ void TagLabel::mousePressEvent(QMouseEvent *event)
         emit removed(m_tagId);
     QLabel::mousePressEvent(event);
 }
+

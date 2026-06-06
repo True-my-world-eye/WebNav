@@ -3,7 +3,7 @@
 #pragma once
 #include <QVector>
 #include <optional>
-#include "core/models/Tag.h"
+#include "Tag.h"
 
 class ITagRepository
 {

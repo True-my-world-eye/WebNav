@@ -19,3 +19,4 @@ signals:
 private:
     QTimer *m_debounceTimer;    // 防抖定时器
 };
+

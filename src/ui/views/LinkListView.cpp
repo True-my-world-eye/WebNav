@@ -32,3 +32,4 @@ void LinkListView::setLinkData(QStandardItemModel *model)
     horizontalHeader()->setStretchLastSection(true);
     horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 }
+

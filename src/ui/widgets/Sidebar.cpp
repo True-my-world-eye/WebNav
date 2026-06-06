@@ -82,3 +82,4 @@ void Sidebar::refresh()
     // 从 SqliteTagRepository 获取所有标签
     // 为每个标签创建带颜色的 QListWidgetItem
 }
+

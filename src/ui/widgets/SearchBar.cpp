@@ -22,3 +22,4 @@ SearchBar::SearchBar(QWidget *parent)
         emit searchTriggered(text().trimmed());
     });
 }
+

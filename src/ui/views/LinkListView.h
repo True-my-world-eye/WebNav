@@ -21,3 +21,4 @@ signals:
 private:
     QStandardItemModel *m_model = nullptr;
 };
+

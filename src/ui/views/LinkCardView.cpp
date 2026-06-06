@@ -27,3 +27,4 @@ void LinkCardView::setLinkData(QStandardItemModel *model)
     m_model = model;
     setModel(m_model);
 }
+

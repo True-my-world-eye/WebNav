@@ -1,7 +1,7 @@
 ﻿// SqliteFolderRepository.h — 文件夹仓库的 SQLite 实现
 
 #pragma once
-#include "core/database/interfaces/IFolderRepository.h"
+#include "../interfaces/IFolderRepository.h"
 #include <QSqlDatabase>
 
 class SqliteFolderRepository : public IFolderRepository

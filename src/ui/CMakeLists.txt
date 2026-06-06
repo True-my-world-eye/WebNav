@@ -14,5 +14,6 @@ target_link_libraries(WebNav_ui PUBLIC
     WebNav_ui_widgets
     WebNav_ui_views
     WebNav_ui_dialogs
+    WebNav_utils
 )
 target_include_directories(WebNav_ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

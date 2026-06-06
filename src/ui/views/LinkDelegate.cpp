@@ -34,3 +34,4 @@ QSize LinkDelegate::sizeHint(const QStyleOptionViewItem &option,
 
     return QStyledItemDelegate::sizeHint(option, index);
 }
+

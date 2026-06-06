@@ -44,3 +44,4 @@ private:
     QListWidget *m_tagList;         // 标签列表
     QLabel *m_tagLabel;             // "标签"标题
 };
+

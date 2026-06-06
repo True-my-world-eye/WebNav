@@ -1,7 +1,7 @@
 ﻿// SqliteTagRepository.h — 标签仓库的 SQLite 实现
 
 #pragma once
-#include "core/database/interfaces/ITagRepository.h"
+#include "../interfaces/ITagRepository.h"
 #include <QSqlDatabase>
 
 class SqliteTagRepository : public ITagRepository

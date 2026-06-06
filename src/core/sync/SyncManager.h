@@ -5,9 +5,9 @@
 #include <QObject>
 #include <memory>
 #include "ISyncProvider.h"
-#include "core/database/interfaces/ILinkRepository.h"
-#include "core/database/interfaces/IFolderRepository.h"
-#include "core/database/interfaces/ITagRepository.h"
+#include "interfaces/ILinkRepository.h"
+#include "interfaces/IFolderRepository.h"
+#include "interfaces/ITagRepository.h"
 
 class SyncManager : public QObject
 {

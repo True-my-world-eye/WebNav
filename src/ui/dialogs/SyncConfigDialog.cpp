@@ -20,3 +20,4 @@ SyncConfigDialog::SyncConfigDialog(QWidget *parent)
     placeholder->setWordWrap(true);
     layout->addWidget(placeholder);
 }
+

@@ -17,3 +17,4 @@ private:
 
     QComboBox *m_themeCombo;        // 主题选择
 };
+

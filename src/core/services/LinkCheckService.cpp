@@ -12,7 +12,7 @@ LinkCheckService::LinkCheckService(QObject *parent)
 
 void LinkCheckService::checkLink(const QString &url)
 {
-    QNetworkRequest request(QUrl(url));
+    QNetworkRequest request{QUrl(url)};
     request.setTransferTimeout(10000);          // 10 秒超时
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);

@@ -7,7 +7,7 @@
 #include <QCompleter>
 #include <QStringListModel>
 #include <QVector>
-#include "core/models/Tag.h"
+#include "models/Tag.h"
 
 class TagSelector : public QWidget
 {
@@ -34,3 +34,4 @@ private:
     QStringListModel *m_completerModel;     // 补全数据模型
     QVector<Tag> m_availableTags;           // 可用标签列表
 };
+

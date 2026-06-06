@@ -5,7 +5,7 @@
 #pragma once
 #include <QVector>
 #include <optional>
-#include "core/models/Link.h"
+#include "Link.h"
 
 // 链接仓库接口，所有持久化操作通过此接口完成
 class ILinkRepository

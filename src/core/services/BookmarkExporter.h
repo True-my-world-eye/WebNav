@@ -4,8 +4,8 @@
 #pragma once
 #include <QString>
 #include <QVector>
-#include "core/models/Link.h"
-#include "core/models/Folder.h"
+#include "Link.h"
+#include "Folder.h"
 
 class BookmarkExporter
 {

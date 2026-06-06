@@ -67,3 +67,4 @@ void FolderTreeView::onCustomContextMenu(const QPoint &pos)
     int folderId = item->data(0, Qt::UserRole).toInt();
     emit folderContextMenu(folderId, mapToGlobal(pos));
 }
+

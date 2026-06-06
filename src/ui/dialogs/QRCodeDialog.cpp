@@ -20,3 +20,4 @@ QRCodeDialog::QRCodeDialog(const QString &url, QWidget *parent)
     urlLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     layout->addWidget(urlLabel);
 }
+

@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "core/database/interfaces/ILinkRepository.h"
+#include "../interfaces/ILinkRepository.h"
 #include <QSqlDatabase>
 #include <QSqlQuery>
 
