@@ -556,7 +556,7 @@ public:
 
 ---
 
-## 18. Bug 修复记录
+## 19. Bug 修复记录
 
 > 本节记录开发/测试中遇到的运行时 Bug 及其修复方案，便于后续回溯。
 
@@ -586,5 +586,22 @@ otes、aviconPath、	humbnailPath 五个字段用 link.field.isNull() ? QString
 
 **涉及文件**：
 - src/core/database/impl/SqliteLinkRepository.cpp — insert() 和 update() 方法
+
+### Bug 3: 链接表缺少 sort_order 列导致无法拖拽排序
+**症状**：新增"拖拽改变链接顺序"功能后，发现 `links` 表缺少排序字段，无法持久化用户调整的顺序。
+**根因**：原 `links` 表没有 `sort_order` 列，`ORDER BY` 只能按时间排序，无法记录用户手动调整的顺序。
+**修复**：
+- `schema.sql` 中 `links` 表新增 `sort_order INTEGER NOT NULL DEFAULT 0` 列
+- `Link.h` 新增 `sortOrder = 0` 字段
+- `SqliteLinkRepository` 新增 `reorderLinks()` 方法，批量更新排序
+- `DatabaseManager::migrateIfNeeded()` 新增迁移逻辑，对旧数据库执行 `ALTER TABLE` 添加该列
+- 列表视图启用 `InternalMove` 拖拽模式，拖拽完成后通过 `onLinksReordered()` 更新数据库
+**涉及文件**：
+- `resources/database/schema.sql`
+- `src/core/models/Link.h`
+- `src/core/database/interfaces/ILinkRepository.h`
+- `src/core/database/impl/SqliteLinkRepository.h/.cpp`
+- `src/core/database/DatabaseManager.cpp`
+- `src/ui/MainWindow.cpp`
 
 **修复提交**：—
