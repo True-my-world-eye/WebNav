@@ -21,7 +21,7 @@ target_link_libraries(WebNav PRIVATE
 )
 
 # ── Windows 专属设置 ──
-if(WIN32 AND NOT MINGW)
+if(WIN32)
     set_target_properties(WebNav PROPERTIES
         WIN32_EXECUTABLE TRUE
     )

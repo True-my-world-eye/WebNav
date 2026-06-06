@@ -9,54 +9,76 @@
 #include <QFormLayout>
 #include <QApplication>
 #include <QFile>
+#include <QSettings>
 
 SettingsDialog::SettingsDialog(QWidget *parent)
     : QDialog(parent)
 {
     setupUi();
-    setWindowTitle(QStringLiteral("\u8bbe\u7f6e"));
-    setFixedSize(400, 300);
+    setWindowTitle(QStringLiteral("设置"));
+    setFixedSize(380, 250);
+
+    // load saved theme
+    QSettings settings;
+    QString savedTheme = settings.value("theme", "dark").toString();
+    for (int i = 0; i < m_themeCombo->count(); i++) {
+        if (m_themeCombo->itemData(i).toString() == savedTheme) {
+            m_themeCombo->setCurrentIndex(i);
+            break;
+        }
+    }
+    // apply theme on startup
+    applyTheme(savedTheme);
 }
 
 void SettingsDialog::setupUi()
 {
     auto *mainLayout = new QVBoxLayout(this);
 
-    // ── 外观设置 ──
-    auto *appearanceGroup = new QGroupBox(QStringLiteral("\u5916\u89c2"), this);
+    // appearance
+    auto *appearanceGroup = new QGroupBox(QStringLiteral("外观"), this);
     auto *appearanceLayout = new QFormLayout(appearanceGroup);
 
     m_themeCombo = new QComboBox(this);
-    m_themeCombo->addItem(QStringLiteral("\u968f\u7cfb\u7edf"), "system");
-    m_themeCombo->addItem(QStringLiteral("\u6d45\u8272"), "light");
-    m_themeCombo->addItem(QStringLiteral("\u6df1\u8272"), "dark");
-    appearanceLayout->addRow(QStringLiteral("\u4e3b\u9898:"), m_themeCombo);
+    m_themeCombo->addItem(QStringLiteral("深色"), "dark");
+    m_themeCombo->addItem(QStringLiteral("浅色"), "light");
+    appearanceLayout->addRow(QStringLiteral("主题:"), m_themeCombo);
 
-    // 主题切换即时生效
     connect(m_themeCombo, &QComboBox::currentIndexChanged, this, [this]() {
-        QString key = m_themeCombo->currentData().toString();
-        QString qssFile;
-        if (key == "system" || key == "light")
-            qssFile = QStringLiteral(":/themes/light.qss");
-        else
-            qssFile = QStringLiteral(":/themes/dark.qss");
-
-        QFile file(qssFile);
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            qApp->setStyleSheet(file.readAll());
-            file.close();
-        }
+        applyTheme(m_themeCombo->currentData().toString());
     });
 
     mainLayout->addWidget(appearanceGroup);
 
     mainLayout->addStretch();
 
-    // 关闭按钮
+    // close button
     auto *btnLayout = new QHBoxLayout();
     btnLayout->addStretch();
-    auto *closeBtn = new QPushButton(QStringLiteral("\u5173\u95ed"), this);
+    auto *closeBtn = new QPushButton(QStringLiteral("关闭"), this);
     connect(closeBtn, &QPushButton::clicked, this, &QDialog::accept);
     btnLayout->addWidget(closeBtn);
     mainLayout->addLayout(btnLayout);
+}
+
+void SettingsDialog::applyTheme(const QString &key)
+{
+    QString qssFile;
+    if (key == "light")
+        qssFile = QStringLiteral(":/themes/light.qss");
+    else
+        qssFile = QStringLiteral(":/themes/dark.qss");
+
+    QFile file(qssFile);
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qApp->setStyleSheet(file.readAll());
+        file.close();
+    }
+}
+
+void SettingsDialog::accept()
+{
+    QSettings settings;
+    settings.setValue("theme", m_themeCombo->currentData().toString());
+    QDialog::accept();
 }

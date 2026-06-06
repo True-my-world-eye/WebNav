@@ -4,7 +4,6 @@
 #include <QLabel>
 #include <QMessageBox>
 #include <QUrl>
-#include <QLabel>
 
 LinkEditDialog::LinkEditDialog(QWidget *parent) : QDialog(parent) {
     setupUi();

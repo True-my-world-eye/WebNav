@@ -4,6 +4,8 @@
 #pragma once
 #include <QTableView>
 #include <QStandardItemModel>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 
 class LinkListView : public QTableView
 {
@@ -17,6 +19,10 @@ public:
 
 signals:
     void linkDoubleClicked(int linkId);
+    void linkDropped(int fromRow, int toRow);
+
+protected:
+    void dropEvent(QDropEvent *event) override;
 
 private:
     QStandardItemModel *m_model = nullptr;

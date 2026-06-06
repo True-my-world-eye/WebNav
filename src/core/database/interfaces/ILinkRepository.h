@@ -16,6 +16,8 @@ public:
     virtual std::optional<Link> getById(int id) = 0;
     virtual QVector<Link> getByFolder(int folderId) = 0;
     virtual QVector<Link> search(const QString &keyword) = 0;
+    virtual QVector<Link> getByTag(int tagId) = 0;
+    virtual QVector<Link> getByFolderAndTag(int folderId, int tagId) = 0;
     virtual QVector<Link> getRecent(int limit = 50) = 0;
     virtual QVector<Link> getMostVisited(int limit = 50) = 0;
     virtual QVector<Link> getBroken() = 0;

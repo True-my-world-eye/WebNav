@@ -5,6 +5,7 @@
 #include <QStackedWidget>
 #include <QStandardItemModel>
 #include <QAction>
+#include <QTimer>
 #include "Sidebar.h"
 #include "SearchBar.h"
 #include "LinkListView.h"
@@ -44,6 +45,7 @@ private:
     void setupStatusBar();
     void setupShortcuts();
     void buildLinkModel(const QVector<Link> &links);
+    void applyFilters();
     int selectedLinkId() const;
     QVector<int> selectedLinkIds() const;
 
@@ -63,4 +65,11 @@ private:
     QAction *m_deleteAction = nullptr;
     bool m_isCardView = false;
     bool m_isRebuildingModel = false;
+
+    // 筛选状态
+    int m_filterFolderId = -1;
+    int m_filterTagId = -1;
+    QString m_filterKeyword;
+
+    QTimer *m_dragRefreshTimer = nullptr;
 };

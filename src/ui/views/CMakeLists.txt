@@ -3,8 +3,6 @@
 qt_add_library(WebNav_ui_views STATIC
     LinkListView.h    LinkListView.cpp
     LinkCardView.h    LinkCardView.cpp
-    LinkDelegate.h    LinkDelegate.cpp
-    FolderTreeView.h  FolderTreeView.cpp
 )
 target_link_libraries(WebNav_ui_views PUBLIC
     Qt6::Core

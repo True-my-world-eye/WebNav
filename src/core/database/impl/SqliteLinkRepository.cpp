@@ -102,6 +102,45 @@ QVector<Link> SqliteLinkRepository::getRecent(int limit)
     return results;
 }
 
+QVector<Link> SqliteLinkRepository::getByTag(int tagId)
+{
+    QVector<Link> results;
+    QSqlQuery query(m_db);
+    query.prepare(R"(
+        SELECT l.* FROM links l
+        INNER JOIN link_tags lt ON l.id = lt.link_id
+        WHERE lt.tag_id = ?
+        ORDER BY l.sort_order ASC, l.created_at DESC
+    )");
+    query.addBindValue(tagId);
+    if (query.exec())
+    {
+        while (query.next())
+            results.append(rowToLink(query));
+    }
+    return results;
+}
+
+QVector<Link> SqliteLinkRepository::getByFolderAndTag(int folderId, int tagId)
+{
+    QVector<Link> results;
+    QSqlQuery query(m_db);
+    query.prepare(R"(
+        SELECT l.* FROM links l
+        INNER JOIN link_tags lt ON l.id = lt.link_id
+        WHERE l.folder_id = ? AND lt.tag_id = ?
+        ORDER BY l.sort_order ASC, l.created_at DESC
+    )");
+    query.addBindValue(folderId);
+    query.addBindValue(tagId);
+    if (query.exec())
+    {
+        while (query.next())
+            results.append(rowToLink(query));
+    }
+    return results;
+}
+
 QVector<Link> SqliteLinkRepository::getMostVisited(int limit)
 {
     QVector<Link> results;

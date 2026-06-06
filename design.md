@@ -2,7 +2,7 @@
 
 > 基于 C++ / Qt 6 的桌面网页链接管理器
 >
-> 最后更新：2026-06-06
+> 最后更新：2026-06-07
 
 ---
 
@@ -599,7 +599,6 @@ public:
 - src/core/database/DatabaseManager.cpp — executeSchema() 方法
 
 **修复提交**：—
-
 ### Bug 2: 默认构造的 QString 被 Qt SQLite 驱动绑定为 SQL NULL
 
 **症状**：建表成功后，插入链接报 NOT NULL constraint failed: links.description。
@@ -632,3 +631,78 @@ otes、aviconPath、	humbnailPath 五个字段用 link.field.isNull() ? QString
 - `src/ui/MainWindow.cpp`
 
 **修复提交**：—
+
+### Bug 4: 标签设置后无法保留/显示（缺失可视反馈）
+
+**症状**：在编辑对话框中为链接添加标签，关闭后标签未绑定到链接，主界面不显示标签。
+
+**根因**：`TagSelector` 只有输入框，没有已选标签的可视反馈区，用户看不到已选标签。且 `QCompleter` 弹出时回车可能被拦截导致 `returnPressed` 不触发。
+
+**修复**：
+- 新增 `FlowLayout` 流式布局，已选标签以圆角气泡 (chip) 形式显示，支持自动折行
+- 每个 chip 可点击移除
+- 双重选中途径：`returnPressed` + `QCompleter::activated`
+- 新增标签即时通过 `addSelectedTagId()` 加入选中集
+
+**涉及文件**：
+- `src/ui/widgets/TagSelector.h/.cpp`
+
+### Bug 5: 主题切换无法保存 / 默认跟随系统不可用
+
+**症状**：设置中切换主题后，重启软件回到浅色主题。
+
+**根因**：
+1. `QSettings` 未正确保存和读取主题值
+2. `Application::applyTheme()` 路径拼接 `":/themes/system.qss"` 不存在
+3. QSS 文件（`light.qss` / `dark.qss`）内容为空
+
+**修复**：
+- 删除 "随系统" 选项，默认深色
+- `QSettings` 读写 `"theme"` 键
+- `Application` 启动时从 `QSettings` 加载主题
+- 编写完整的浅色/深色 QSS 主题样式表（~280 行）
+
+**涉及文件**：
+- `src/app/Application.cpp`
+- `src/ui/dialogs/SettingsDialog.h/.cpp`
+- `resources/themes/light.qss` / `dark.qss`
+
+### Bug 6: 拖拽排序导致行消失/覆盖
+
+**症状**：列表视图拖拽行后，行数据消失或覆盖其他行。
+
+**根因**：`QTableView` + `InternalMove` + `setSortingEnabled(true)` 冲突。Qt 内置排序和拖拽同时启用时，行移动后内部排序立即介入，导致混乱。
+
+**修复**：
+- 禁用 `setSortingEnabled(false)`
+- 覆写 `LinkListView::dropEvent()`，在拖拽完成后读取 model 新顺序
+- 通过 `linkDropped(fromRow, toRow)` 信号通知 MainWindow 持久化排序并刷新页面
+
+**涉及文件**：
+- `src/ui/views/LinkListView.h/.cpp`
+- `src/ui/MainWindow.cpp`
+
+### Bug 7: Windows 编译后带控制台窗口
+
+**症状**：双击 WebNav.exe 启动时，会同时弹出一个命令行窗口。
+
+**根因**：`CMakeLists.txt` 中 `WIN32_EXECUTABLE` 属性被 `AND NOT MINGW` 条件限制（针对 MSVC），MinGW 编译时缺少该属性。
+
+**修复**：移除 `AND NOT MINGW`，统一启用 `WIN32_EXECUTABLE`。
+
+**涉及文件**：
+- `src/CMakeLists.txt`
+
+### Bug 8: 侧边栏 + 按钮显示异常（形如复选框）
+
+**症状**：侧边栏标题旁的 "+" 按钮显示为复选框样式。
+
+**根因**：全局 `QPushButton` QSS 样式有 `padding: 6px 16px` 和 `min-height`，使 20×20 的小按钮被拉伸变形。
+
+**修复**：
+- 添加 `#sidebarAddBtn` 专用样式，固定 `min/max-width/height: 20px`、`padding: 0px`
+- 在浅色/深色 QSS 中分别添加该对象名的样式定义
+
+**涉及文件**：
+- `src/ui/widgets/Sidebar.cpp`（添加 `setObjectName("sidebarAddBtn")`）
+- `resources/themes/light.qss` / `dark.qss`

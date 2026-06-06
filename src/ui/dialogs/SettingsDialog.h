@@ -1,5 +1,5 @@
 ﻿// SettingsDialog.h — 偏好设置对话框
-// 包含：主题切换、快捷键配置、同步设置等
+// 包含：主题切换、默认视图配配置、同步设置等
 
 #pragma once
 #include <QDialog>
@@ -14,6 +14,8 @@ public:
 
 private:
     void setupUi();
+    void applyTheme(const QString &key);
+    void accept() override;
 
     QComboBox *m_themeCombo;        // 主题选择
 };

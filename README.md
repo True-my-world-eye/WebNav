@@ -57,7 +57,7 @@ cmake --build . --target WebNav -- -j8
 - **附加字段**: 为链接保存账号/密码/邮箱/电话等凭据（密码加密存储）
 - **书签导入**: 支持 Chrome / Firefox / Edge HTML 导入
 - **实时搜索**: 300ms 防抖，搜索标题/URL/备注
-- **深色/浅色主题**: 跟随系统自动切换
+- **深色/浅色主题**: 默认深色，设置中可切换为浅色
 - **快捷键**: Ctrl+N 新建 / Ctrl+F 搜索 / Delete 删除
 - **应用图标**: 自定义罗盘 SVG 图标
 - **未来计划**: 云端同步（Phase 3, Alibaba ECS + FastAPI）

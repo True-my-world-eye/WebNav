@@ -10,6 +10,7 @@
 #include <QInputDialog>
 #include <QPushButton>
 #include <QHBoxLayout>
+#include <QTreeWidgetItemIterator>
 
 Sidebar::Sidebar(QWidget *parent) : QWidget(parent)
 {
@@ -27,6 +28,7 @@ Sidebar::Sidebar(QWidget *parent) : QWidget(parent)
     folderHeader->addStretch();
     auto *folderAddBtn = new QPushButton(QStringLiteral("+"), this);
     folderAddBtn->setFixedSize(20, 20);
+    folderAddBtn->setObjectName("sidebarAddBtn");
     folderAddBtn->setToolTip(QStringLiteral("\u65b0\u5efa\u6587\u4ef6\u5939"));
     connect(folderAddBtn, &QPushButton::clicked, this, [this]() {
         bool ok;
@@ -51,6 +53,7 @@ Sidebar::Sidebar(QWidget *parent) : QWidget(parent)
     tagHeader->addStretch();
     auto *tagAddBtn = new QPushButton(QStringLiteral("+"), this);
     tagAddBtn->setFixedSize(20, 20);
+    tagAddBtn->setObjectName("sidebarAddBtn");
     tagAddBtn->setToolTip(QStringLiteral("\u65b0\u5efa\u6807\u7b7e"));
     connect(tagAddBtn, &QPushButton::clicked, this, [this]() {
         bool ok;
@@ -86,7 +89,24 @@ void Sidebar::setupFolderTree()
 
     connect(m_folderTree, &QTreeWidget::itemClicked, this, [this](QTreeWidgetItem *item, int) {
         int fid = item->data(0, Qt::UserRole).toInt();
-        emit folderSelected(fid);
+        // 点击已选中的 = 取消选中
+        if (fid == m_selectedFolderId) {
+            m_selectedFolderId = -1;
+            item->setSelected(false);
+            emit folderSelected(-1);
+        } else {
+            m_selectedFolderId = fid;
+            // 取消标签的选中
+            if (m_selectedTagId != -1) {
+                m_selectedTagId = -1;
+                for (int i = 0; i < m_tagList->count(); i++) {
+                    auto *ti = m_tagList->item(i);
+                    if (ti->data(Qt::UserRole).toInt() == m_selectedTagId)
+                        ti->setSelected(false);
+                }
+            }
+            emit folderSelected(fid);
+        }
     });
 
     connect(m_folderTree, &QTreeWidget::customContextMenuRequested, this, [this](const QPoint &pos) {
@@ -120,7 +140,28 @@ void Sidebar::setupTagList()
 
     connect(m_tagList, &QListWidget::itemClicked, this, [this](QListWidgetItem *item) {
         int tid = item->data(Qt::UserRole).toInt();
-        emit tagSelected(tid);
+        // 点击已选中的 = 取消选中
+        if (tid == m_selectedTagId) {
+            m_selectedTagId = -1;
+            item->setSelected(false);
+            emit tagSelected(-1);
+        } else {
+            m_selectedTagId = tid;
+            // 取消文件夹的选中
+            if (m_selectedFolderId != -1) {
+                m_selectedFolderId = -1;
+                // 清除文件夹树的选择
+                QTreeWidgetItemIterator it(m_folderTree);
+                while (*it) {
+                    if ((*it)->data(0, Qt::UserRole).toInt() == m_selectedFolderId) {
+                        (*it)->setSelected(false);
+                        break;
+                    }
+                    ++it;
+                }
+            }
+            emit tagSelected(tid);
+        }
     });
 
     connect(m_tagList, &QListWidget::customContextMenuRequested, this, [this](const QPoint &pos) {
@@ -140,7 +181,7 @@ void Sidebar::refresh()
     m_folderTree->clear();
     if (m_folderRepo)
     {
-        auto roots = m_folderRepo->getRootFolders();
+        // 从根级文件夹开始递归构建（根文件夹 parent_id IS NULL）
         std::function<void(int, QTreeWidgetItem*)> addFolders;
         addFolders = [&](int parentId, QTreeWidgetItem *parent) {
             auto children = m_folderRepo->getByParent(parentId);
@@ -154,7 +195,15 @@ void Sidebar::refresh()
                 addFolders(f.id, item);
             }
         };
-        addFolders(-1, nullptr);
+        // 先获取根级文件夹（parent_id IS NULL），再以它们的 ID 递归
+        auto roots = m_folderRepo->getRootFolders();
+        for (const auto &f : roots)
+        {
+            auto *item = new QTreeWidgetItem(m_folderTree);
+            item->setText(0, f.name);
+            item->setData(0, Qt::UserRole, f.id);
+            addFolders(f.id, item);
+        }
     }
 
     // ── 刷新标签列表 ──

@@ -12,6 +12,8 @@ public:
     std::optional<Link> getById(int id) override;
     QVector<Link> getByFolder(int folderId) override;
     QVector<Link> search(const QString &keyword) override;
+    QVector<Link> getByTag(int tagId) override;
+    QVector<Link> getByFolderAndTag(int folderId, int tagId) override;
     QVector<Link> getRecent(int limit) override;
     QVector<Link> getMostVisited(int limit) override;
     QVector<Link> getBroken() override;

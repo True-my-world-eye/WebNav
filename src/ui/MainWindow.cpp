@@ -12,6 +12,9 @@
 #include <QSplitter>
 #include <QShortcut>
 #include <QInputDialog>
+#include <QSettings>
+#include <QFile>
+#include <QApplication>
 #include "models/LinkField.h"
 #include "models/Tag.h"
 
@@ -45,11 +48,7 @@ MainWindow::MainWindow(ILinkRepository *linkRepo, IFolderRepository *folderRepo,
     // ── 列表视图设置：只读 + 右键菜单 + 拖拽排序 ──
     m_listView->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_listView->setContextMenuPolicy(Qt::CustomContextMenu);
-    m_listView->setDragEnabled(true);
-    m_listView->setAcceptDrops(true);
-    m_listView->setDropIndicatorShown(true);
-    m_listView->setDragDropMode(QAbstractItemView::InternalMove);
-    m_listView->setDragDropOverwriteMode(false);
+    // 拖拽已在 LinkListView 构造函数中设置，这里不需要重复
 
     // ── 卡片视图设置：只读 + 右键菜单 ──
     m_cardView->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -61,11 +60,29 @@ MainWindow::MainWindow(ILinkRepository *linkRepo, IFolderRepository *folderRepo,
     connect(m_listView, &QWidget::customContextMenuRequested, this, &MainWindow::showContextMenu);
     connect(m_cardView, &QWidget::customContextMenuRequested, this, &MainWindow::showContextMenu);
 
-    connect(m_sidebar, &Sidebar::folderSelected, this, [this](int fid) {
-        buildLinkModel(m_linkRepo->getByFolder(fid));
+    // ── 拖拽排序：由 LinkListView 发出拖动完成信号，在此持久化并刷新 ──
+    connect(m_listView, &LinkListView::linkDropped, this, [this](int fromRow, int toRow) {
+        // 用拖拽后的 model 顺序保存 sort_order
+        if (!m_linkModel) return;
+        QVector<QPair<int,int>> orders;
+        for (int i = 0; i < m_linkModel->rowCount(); i++) {
+            int linkId = m_linkModel->item(i, 0)->data(Qt::UserRole).toInt();
+            if (linkId > 0) orders.append({linkId, i});
+        }
+        if (!orders.isEmpty()) {
+            m_linkRepo->reorderLinks(orders);
+            // 完全刷新以消除 Qt InternalMove 造成的显示错乱
+            buildLinkModel(m_linkRepo->getAll());
+        }
     });
-    connect(m_sidebar, &Sidebar::tagSelected, this, [this](int) {
-        refreshLinks();
+
+    connect(m_sidebar, &Sidebar::folderSelected, this, [this](int fid) {
+        m_filterFolderId = fid;
+        applyFilters();
+    });
+    connect(m_sidebar, &Sidebar::tagSelected, this, [this](int tagId) {
+        m_filterTagId = tagId;
+        applyFilters();
     });
     connect(m_sidebar, &Sidebar::folderStructureChanged, this, &MainWindow::refreshLinks);
     connect(m_sidebar, &Sidebar::folderNewRequested, this, &MainWindow::onNewFolder);
@@ -74,6 +91,13 @@ MainWindow::MainWindow(ILinkRepository *linkRepo, IFolderRepository *folderRepo,
     connect(m_sidebar, &Sidebar::tagDeleteRequested, this, &MainWindow::onDeleteTag);
 
     refreshLinks();
+
+    // 应用默认视图
+    QSettings settings;
+    QString defaultView = settings.value("defaultView", "list").toString();
+    if (defaultView == "card" && !m_isCardView) {
+        toggleView();
+    }
 }
 
 MainWindow::~MainWindow() = default;
@@ -145,6 +169,8 @@ void MainWindow::setupShortcuts()
 
 void MainWindow::buildLinkModel(const QVector<Link> &links)
 {
+    m_isRebuildingModel = true;
+
     delete m_linkModel;
     // 5 列：标题 / URL / 文件夹 / 标签（去掉时间列）
     m_linkModel = new QStandardItemModel(links.size(), 5, this);
@@ -190,15 +216,15 @@ void MainWindow::buildLinkModel(const QVector<Link> &links)
     m_listView->setLinkData(m_linkModel);
     m_cardView->setLinkData(m_linkModel);
 
-    // 设置列宽
+    // set default widths for Interactive columns
     if (m_linkModel->columnCount() >= 4) {
+        m_listView->setColumnWidth(0, 200);
         m_listView->setColumnWidth(1, 220);
         m_listView->setColumnWidth(2, 100);
         m_listView->setColumnWidth(3, 120);
     }
 
-// 拖拽排序完成后触发重新排序
-    connect(m_linkModel, &QStandardItemModel::rowsMoved, this, &MainWindow::onLinksReordered);
+    m_isRebuildingModel = false;
 
     statusBar()->showMessage(
         QStringLiteral("\u5171 %1 \u6761\u94fe\u63a5").arg(links.size()));
@@ -206,13 +232,31 @@ void MainWindow::buildLinkModel(const QVector<Link> &links)
 
 void MainWindow::refreshLinks()
 {
+    m_filterFolderId = -1;
+    m_filterTagId = -1;
+    m_filterKeyword.clear();
     buildLinkModel(m_linkRepo->getAll());
 }
 
 void MainWindow::onSearch(const QString &keyword)
 {
-    if (keyword.isEmpty()) { refreshLinks(); return; }
+    m_filterKeyword = keyword;
+    if (keyword.isEmpty()) { applyFilters(); return; }
     buildLinkModel(m_linkRepo->search(keyword));
+}
+
+void MainWindow::applyFilters()
+{
+    m_filterKeyword.clear();
+    m_searchBar->clear();
+    if (m_filterFolderId >= 0 && m_filterTagId >= 0)
+        buildLinkModel(m_linkRepo->getByFolderAndTag(m_filterFolderId, m_filterTagId));
+    else if (m_filterFolderId >= 0)
+        buildLinkModel(m_linkRepo->getByFolder(m_filterFolderId));
+    else if (m_filterTagId >= 0)
+        buildLinkModel(m_linkRepo->getByTag(m_filterTagId));
+    else
+        buildLinkModel(m_linkRepo->getAll());
 }
 
 void MainWindow::onNewLink()
@@ -222,9 +266,13 @@ void MainWindow::onNewLink()
     dialog.setFolders(m_folderRepo ? m_folderRepo->getAll() : QVector<Folder>());
     dialog.setTags(m_tagRepo ? m_tagRepo->getAll() : QVector<Tag>());
 
-    connect(&dialog, &LinkEditDialog::createNewTag, this, [this](const QString &name) {
+    connect(&dialog, &LinkEditDialog::createNewTag, this, [this, &dialog](const QString &name) {
         Tag t; t.name = name;
-        m_tagRepo->insert(t);
+        int newId = m_tagRepo->insert(t);
+        if (newId > 0) {
+            dialog.tagSelector()->addSelectedTagId(newId);
+            dialog.setTags(m_tagRepo->getAll());  // 刷新补全列表
+        }
     });
 
     if (dialog.exec() == QDialog::Accepted)
@@ -291,10 +339,10 @@ void MainWindow::onDoubleClicked(int linkId)
 
     LinkEditDialog dialog(this);
     dialog.setWindowTitle(QStringLiteral("\u7f16\u8f91\u94fe\u63a5"));
-    dialog.setLink(link);
-    dialog.setLinkTime(link.createdAt, link.updatedAt);
     dialog.setFolders(m_folderRepo->getAll());
     dialog.setTags(m_tagRepo->getAll());
+    dialog.setLink(link);
+    dialog.setLinkTime(link.createdAt, link.updatedAt);
     dialog.fieldEditor()->setFields(m_linkRepo->getLinkFields(linkId));
 
     QVector<int> tagIds;
@@ -302,9 +350,13 @@ void MainWindow::onDoubleClicked(int linkId)
         tagIds.append(t.id);
     dialog.tagSelector()->setSelectedTagIds(tagIds);
 
-    connect(&dialog, &LinkEditDialog::createNewTag, this, [this](const QString &name) {
+    connect(&dialog, &LinkEditDialog::createNewTag, this, [this, &dialog](const QString &name) {
         Tag t; t.name = name;
-        m_tagRepo->insert(t);
+        int newId = m_tagRepo->insert(t);
+        if (newId > 0) {
+            dialog.tagSelector()->addSelectedTagId(newId);
+            dialog.setTags(m_tagRepo->getAll());  // 刷新补全列表
+        }
     });
 
     if (dialog.exec() == QDialog::Accepted)
@@ -427,7 +479,7 @@ void MainWindow::showContextMenu(const QPoint &pos)
 
 void MainWindow::onLinksReordered()
 {
-    if (!m_linkModel) return;
+    if (!m_linkModel || m_isRebuildingModel) return;
     QVector<QPair<int,int>> orders;
     for (int i = 0; i < m_linkModel->rowCount(); i++)
     {
@@ -499,7 +551,20 @@ void MainWindow::onDeleteTag(int tagId)
 
 void MainWindow::openSettings()
 {
-    SettingsDialog d(this); d.exec();
+    SettingsDialog d(this);
+    if (d.exec() == QDialog::Accepted) {
+        QSettings settings;
+        // 重新应用主题
+        QString theme = settings.value("theme", "dark").toString();
+        QString qssFile = (theme == "light")
+            ? QStringLiteral(":/themes/light.qss")
+            : QStringLiteral(":/themes/dark.qss");
+        QFile file(qssFile);
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            qApp->setStyleSheet(file.readAll());
+            file.close();
+        }
+    }
 }
 
 void MainWindow::openAbout()

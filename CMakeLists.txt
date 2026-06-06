@@ -25,10 +25,3 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS
 
 # ── 子模块 ───────────────────────────────────────────────────
 add_subdirectory(src)
-
-# ── 测试 ─────────────────────────────────────────────────────
-option(BUILD_TESTS "Build unit tests" OFF)
-if(BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(tests)
-endif()

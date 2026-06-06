@@ -6,6 +6,7 @@
 #include "MainWindow.h"
 #include <QApplication>
 #include <QFile>
+#include <QSettings>
 #include <QDebug>
 
 Application::Application() = default;
@@ -24,7 +25,10 @@ bool Application::initialize()
     m_linkRepo = std::make_unique<SqliteLinkRepository>(db);
     m_folderRepo = std::make_unique<SqliteFolderRepository>(db);
     m_tagRepo = std::make_unique<SqliteTagRepository>(db);
-    applyTheme();
+    // 从 QSettings 加载保存的主题设置，默认深色
+    QSettings settings;
+    QString themeName = settings.value("theme", "dark").toString();
+    applyTheme(themeName);
     m_mainWindow = std::make_unique<MainWindow>(
         m_linkRepo.get(), m_folderRepo.get(), m_tagRepo.get());
     m_mainWindow->show();
@@ -34,9 +38,11 @@ bool Application::initialize()
 
 void Application::applyTheme(const QString &themeName)
 {
-    QString qssFile = themeName.isEmpty()
-        ? QStringLiteral(":/themes/light.qss")
-        : QStringLiteral(":/themes/%1.qss").arg(themeName);
+    QString qssFile;
+    if (themeName == "dark")
+        qssFile = QStringLiteral(":/themes/dark.qss");
+    else
+        qssFile = QStringLiteral(":/themes/light.qss");
     QFile file(qssFile);
     if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qApp->setStyleSheet(file.readAll());
