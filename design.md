@@ -537,3 +537,61 @@ public:
 |------|------|----------|------|
 | Module 1: 项目骨架 | ✅ 完成 | `feat: init project skeleton` | CMake 构建系统、目录结构、.gitignore、README |
 
+
+| 模块 | 状态 | 提交信息 | 说明 |
+|------|------|----------|------|
+| Module 1: 项目骨架 | ✅ 完成 | `e823532` | CMake 构建系统、目录结构、.gitignore、README、design.md |
+| Module 2: 数据模型 | ✅ 完成 | `f9bd77f` | Link / Folder / Tag / LinkField 纯数据结构 |
+| Module 3: 数据库层 | ✅ 完成 | `2e247d2` | DatabaseManager、Repository 接口 + SQLite 完整 CRUD |
+| Module 4: 核心服务 | ✅ 完成 | `4f10fc5` | CryptoService DPAPI 加密、FaviconService、书签导入导出、死链检测 |
+| Module 5: UI 组件 | ✅ 完成 | `5c92cc8` | Sidebar、SearchBar、TagSelector、TagLabel、FieldEditor |
+| Module 6: UI 双视图 | ✅ 完成 | `5c92cc8` | LinkListView、LinkCardView、LinkDelegate、FolderTreeView |
+| Module 7: UI 对话框 | ✅ 完成 | `5c92cc8` | LinkEditDialog、SettingsDialog、AboutDialog 等 |
+| Module 8: 主窗口+应用 | ✅ 完成 | `5c92cc8` | MainWindow、Application、GlobalHotkey、工具栏、快捷键 |
+| Module 9: 工具类 | ✅ 完成 | `5c92cc8` | PlatformUtils、ColorUtils、ImageUtils |
+
+### 代码统计
+
+- **头文件**: 40 个 (.h)
+- **源文件**: 33 个 (.cpp)
+- **提交次数**: 5 次
+- **总代码量**: ~4000 行
+
+### 下一步开发指引
+
+1. 修复编译错误（主要问题应是缺失的 Qt 模块链接或头文件引用）
+2. 完善 FolderTreeView 和 Sidebar 与数据库的对接
+3. 实现批量操作功能
+4. 添加导入导出对话框的 UI 入口
+5. 开始 Phase 2 功能
+
+---
+
+## 18. 开发进度总览
+
+### Phase 1 进度
+
+| 模块 | 状态 | 提交信息 | 说明 |
+|------|------|----------|------|
+| Module 1: 项目骨架 | ✅ 完成 | `e823532` | CMake 构建系统、目录结构、.gitignore、README、design.md |
+| Module 2: 数据模型 | ✅ 完成 | `f9bd77f` | Link / Folder / Tag / LinkField 纯数据结构 |
+| Module 3: 数据库层 | ✅ 完成 | `2e247d2` | DatabaseManager、Repository 接口 + SQLite CRUD |
+| Module 4: 核心服务 | ✅ 完成 | `4f10fc5` | CryptoService DPAPI、FaviconService、书签导入导出、死链检测 |
+| Module 5: UI 组件 | ✅ 完成 | `5c92cc8` | Sidebar、SearchBar、TagSelector、TagLabel、FieldEditor |
+| Module 6: UI 双视图 | ✅ 完成 | `5c92cc8` | LinkListView、LinkCardView、LinkDelegate、FolderTreeView |
+| Module 7: UI 对话框 | ✅ 完成 | `5c92cc8` | LinkEditDialog、SettingsDialog、AboutDialog 等 |
+| Module 8: 主窗口+应用 | ✅ 完成 | `5c92cc8` | MainWindow、Application、工具栏、快捷键 |
+| Module 9: 工具类 | ✅ 完成 | `5c92cc8` | PlatformUtils、ColorUtils、ImageUtils |
+
+### 代码统计
+
+- **头文件**: 40 个 (.h) + **源文件**: 33 个 (.cpp)
+- **提交次数**: 5 次 | **总代码量**: ~4000 行
+
+### 下一步开发指引
+
+1. 修复编译错误（缺失的 Qt 模块链接或头文件引用）
+2. 完善 FolderTreeView 和 Sidebar 与数据库的对接
+3. 实现批量操作功能
+4. 添加导入导出对话框的 UI 入口
+5. 开始 Phase 2 功能

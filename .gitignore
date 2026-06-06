@@ -43,3 +43,7 @@ sync-server/venv/
 sync-server/.venv/
 __pycache__/
 *.pyc
+
+# 旧版 Qt Creator 项目
+Web-Navigation/
+

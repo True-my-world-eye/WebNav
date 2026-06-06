@@ -6,6 +6,7 @@
 
 #pragma once
 #include <QString>
+#include <memory>
 
 // 加密服务抽象基类
 class CryptoService
