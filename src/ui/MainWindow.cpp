@@ -1,4 +1,4 @@
-#include "MainWindow.h"
+﻿#include "MainWindow.h"
 #include "LinkEditDialog.h"
 #include "SettingsDialog.h"
 #include "AboutDialog.h"
@@ -146,11 +146,12 @@ void MainWindow::setupShortcuts()
 void MainWindow::buildLinkModel(const QVector<Link> &links)
 {
     delete m_linkModel;
-    // 4 列：标题 / URL / 文件夹 / 标签（去掉时间列）
-    m_linkModel = new QStandardItemModel(links.size(), 4, this);
+    // 5 列：标题 / URL / 文件夹 / 标签（去掉时间列）
+    m_linkModel = new QStandardItemModel(links.size(), 5, this);
     m_linkModel->setHorizontalHeaderLabels({
         QStringLiteral("\u6807\u9898"), QStringLiteral("URL"),
-        QStringLiteral("\u6587\u4ef6\u5939"), QStringLiteral("\u6807\u7b7e")});
+        QStringLiteral("\u6587\u4ef6\u5939"), QStringLiteral("\u6807\u7b7e"),
+        QStringLiteral("\u5907\u6ce8")});
 
     QMap<int, QString> folderNames;
     if (m_folderRepo) {
