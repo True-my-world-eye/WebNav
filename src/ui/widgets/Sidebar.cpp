@@ -24,8 +24,18 @@ Sidebar::Sidebar(QWidget *parent) : QWidget(parent)
     folderHeader->setContentsMargins(0,0,0,0);
     auto *folderTitle = new QLabel(QStringLiteral("\U0001F4C1 \u6587\u4ef6\u5939"), this);
     folderTitle->setObjectName("sectionTitle");
+
+    auto *brokenBtn = new QPushButton(QStringLiteral("\u26a0"), this);
+    brokenBtn->setFixedSize(20, 20);
+    brokenBtn->setObjectName("sidebarAddBtn");
+    brokenBtn->setToolTip(QStringLiteral("\u67e5\u770b\u5931\u6548\u94fe\u63a5"));
+    connect(brokenBtn, &QPushButton::clicked, this, [this]() {
+        emit brokenLinksRequested();
+    });
+
     folderHeader->addWidget(folderTitle);
     folderHeader->addStretch();
+    folderHeader->addWidget(brokenBtn);
     auto *folderAddBtn = new QPushButton(QStringLiteral("+"), this);
     folderAddBtn->setFixedSize(20, 20);
     folderAddBtn->setObjectName("sidebarAddBtn");

@@ -92,6 +92,14 @@ MainWindow::MainWindow(ILinkRepository *linkRepo, IFolderRepository *folderRepo,
     connect(m_sidebar, &Sidebar::folderDeleteRequested, this, &MainWindow::onDeleteFolder);
     connect(m_sidebar, &Sidebar::tagDeleteRequested, this, &MainWindow::onDeleteTag);
 
+    // 失效链接筛选
+    connect(m_sidebar, &Sidebar::brokenLinksRequested, this, [this]() {
+        m_filterFolderId = -1;
+        m_filterTagId = -1;
+        m_filterKeyword.clear();
+        buildLinkModel(m_linkRepo->getBroken());
+    });
+
     refreshLinks();
 
     // 应用默认视图

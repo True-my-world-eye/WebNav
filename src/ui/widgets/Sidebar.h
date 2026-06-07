@@ -20,6 +20,7 @@ public:
 
 signals:
     void allLinksRequested();
+    void brokenLinksRequested();
     void folderStructureChanged();
     void folderSelected(int folderId);      // -1 表示取消选中
     void tagSelected(int tagId);            // -1 表示取消选中
