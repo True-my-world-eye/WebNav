@@ -30,6 +30,8 @@ private slots:
     void refreshLinks();
     void openSettings();
     void openAbout();
+    void onImportBookmarks();
+    void onExportBookmarks();
     void onNewFolder(int parentId);
     void onRenameFolder(int folderId);
     void onDeleteFolder(int folderId);

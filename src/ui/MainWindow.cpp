@@ -14,9 +14,12 @@
 #include <QInputDialog>
 #include <QSettings>
 #include <QFile>
+#include <QFileDialog>
 #include <QApplication>
 #include "models/LinkField.h"
 #include "models/Tag.h"
+#include "services/BookmarkImporter.h"
+#include "services/BookmarkExporter.h"
 
 MainWindow::MainWindow(ILinkRepository *linkRepo, IFolderRepository *folderRepo,
                        ITagRepository *tagRepo, QWidget *parent)
@@ -128,6 +131,16 @@ void MainWindow::setupToolBar()
     connect(m_deleteAction, &QAction::triggered, this, &MainWindow::onDeleteLink);
 
     tb->addSeparator();
+
+    // \u2500\u2500 \u6587\u4ef6\u83dc\u5355 \u2500\u2500
+    auto *fileMenu = menuBar()->addMenu(QStringLiteral("\u6587\u4ef6"));
+    auto *importAct = fileMenu->addAction(QStringLiteral("[\u5bfc\u5165] \u5bfc\u5165\u4e66\u7b7e..."));
+    connect(importAct, &QAction::triggered, this, [this]() { onImportBookmarks(); });
+    auto *exportAct = fileMenu->addAction(QStringLiteral("[\u5bfc\u51fa] \u5bfc\u51fa\u4e66\u7b7e..."));
+    connect(exportAct, &QAction::triggered, this, [this]() { onExportBookmarks(); });
+    fileMenu->addSeparator();
+    auto *aboutAct = fileMenu->addAction(QStringLiteral("\u5173\u4e8e WebNav"));
+    connect(aboutAct, &QAction::triggered, this, &MainWindow::openAbout);
 
     // \u2500\u2500 \u6392\u5e8f\u64cd\u4f5c \u2500\u2500
     auto *moveUpAct = tb->addAction(QStringLiteral("\u2191 \u4e0a\u79fb"));
@@ -680,6 +693,68 @@ void MainWindow::batchMoveFolder(const QVector<int> &ids)
     statusBar()->showMessage(
         QStringLiteral("已移动 %1 个链接到 \"%2\"").arg(ids.size()).arg(selected), 3000);
     refreshLinks();
+}
+
+void MainWindow::onImportBookmarks()
+{
+    QString filePath = QFileDialog::getOpenFileName(this,
+        QStringLiteral("导入书签"),
+        QString(),
+        QStringLiteral("HTML 书签文件 (*.html);;所有文件 (*)"));
+    if (filePath.isEmpty()) return;
+
+    BookmarkImporter importer;
+    ImportResult result = importer.importFromFile(filePath);
+
+    if (!result.errorMessage.isEmpty()) {
+        QMessageBox::warning(this, QStringLiteral("导入失败"), result.errorMessage);
+        return;
+    }
+
+    // 将解析出的文件夹和链接写入数据库
+    if (m_folderRepo && !importer.parsedFolders().isEmpty()) {
+        for (const auto &f : importer.parsedFolders())
+            m_folderRepo->insert(f);
+    }
+    if (m_linkRepo && !importer.parsedLinks().isEmpty()) {
+        int imported = 0;
+        for (const auto &link : importer.parsedLinks()) {
+            int id = m_linkRepo->insert(link);
+            if (id > 0) imported++;
+        }
+        statusBar()->showMessage(
+            QStringLiteral("导入完成：新增 %1 个链接，跳过 %2 个重复，创建 %3 个文件夹")
+                .arg(result.importedCount).arg(result.skippedCount).arg(result.folderCount), 5000);
+    }
+
+    m_sidebar->refresh();
+    refreshLinks();
+}
+
+void MainWindow::onExportBookmarks()
+{
+    QString filePath = QFileDialog::getSaveFileName(this,
+        QStringLiteral("导出书签"),
+        QStringLiteral("bookmarks.html"),
+        QStringLiteral("HTML 书签文件 (*.html);;Markdown (*.md);;所有文件 (*)"));
+    if (filePath.isEmpty()) return;
+
+    BookmarkExporter exporter;
+    auto links = m_linkRepo->getAll();
+    auto folders = m_folderRepo ? m_folderRepo->getAll() : QVector<Folder>();
+
+    bool ok = false;
+    if (filePath.endsWith(".md"))
+        ok = exporter.exportToMarkdown(filePath, links, folders);
+    else
+        ok = exporter.exportToFile(filePath, links, folders);
+
+    if (ok)
+        statusBar()->showMessage(
+            QStringLiteral("已导出 %1 条链接到 %2").arg(links.size()).arg(filePath), 5000);
+    else
+        QMessageBox::warning(this, QStringLiteral("导出失败"),
+            QStringLiteral("无法写入文件，请检查路径是否有写权限。"));
 }
 
 void MainWindow::onNewFolder(int parentId)
