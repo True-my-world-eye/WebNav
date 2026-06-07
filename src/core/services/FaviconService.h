@@ -5,6 +5,9 @@
 #include <QObject>
 #include <QNetworkAccessManager>
 #include <QCache>
+#include <QSet>
+#include <QMap>
+#include <QVector>
 #include <functional>
 
 class FaviconService : public QObject
@@ -43,6 +46,12 @@ private:
     // 生成缓存文件名
     static QString cacheFileName(const QString &domain);
 
-    QNetworkAccessManager *m_network;       // 网络请求管理器
-    QCache<QString, QString> m_memoryCache; // 内存缓存（key=域名, value=本地路径）
+    // 递归尝试下一个 URL
+    void tryNextUrl(const QString &domain, const QString &pageUrl,
+                    const QStringList &urls, int *attemptIndex);
+
+    QNetworkAccessManager *m_network;
+    QCache<QString, QString> m_memoryCache;
+    QSet<QString> m_pendingRequests;                // 正在请求中的域名
+    QMap<QString, QVector<std::function<void(const QString&)>>> m_pendingCallbacks;
 };

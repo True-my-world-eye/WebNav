@@ -1,4 +1,4 @@
-﻿// FaviconService.cpp — Favicon 抓取服务实现
+// FaviconService.cpp — Favicon 抓取服务实现
 
 #include "FaviconService.h"
 #include <QUrl>
@@ -83,60 +83,83 @@ void FaviconService::fetchFavicon(const QString &pageUrl,
         return;
     }
 
+    // 保存 callback 到队列，等抓取完成后调用
+    m_pendingCallbacks[domain].append(callback);
+
+    // 如果已经有正在进行的请求，不重复发起
+    if (m_pendingRequests.contains(domain))
+        return;
+    m_pendingRequests.insert(domain);
+
     QStringList urls = buildFaviconUrls(domain);
     auto *attemptIndex = new int(0);
 
-    std::function<void()> tryNext;
-    tryNext = [this, pageUrl, domain, urls, attemptIndex, callback, &tryNext]() {
-        if (*attemptIndex >= urls.size())
-        {
-            delete attemptIndex;
-            if (callback) callback({});
-            emit faviconReady(pageUrl, {});
-            return;
+    // 逐次尝试 URL 列表
+    tryNextUrl(domain, pageUrl, urls, attemptIndex);
+}
+
+void FaviconService::tryNextUrl(const QString &domain, const QString &pageUrl,
+                                 const QStringList &urls, int *attemptIndex)
+{
+    if (*attemptIndex >= urls.size())
+    {
+        // 全部尝试失败
+        delete attemptIndex;
+        m_pendingRequests.remove(domain);
+
+        auto callbacks = m_pendingCallbacks.take(domain);
+        for (auto &cb : callbacks) {
+            if (cb) cb({});
         }
+        emit faviconReady(pageUrl, {});
+        return;
+    }
 
-        QNetworkRequest request(QUrl(urls[*attemptIndex]));
-        request.setTransferTimeout(5000);
+    QNetworkRequest request(QUrl(urls[*attemptIndex]));
+    request.setTransferTimeout(5000);
 
-        QNetworkReply *reply = m_network->get(request);
-        connect(reply, &QNetworkReply::finished, this, [=]() {
-            reply->deleteLater();
+    QNetworkReply *reply = m_network->get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, domain, pageUrl, urls, attemptIndex]() {
+        reply->deleteLater();
 
-            if (reply->error() == QNetworkReply::NoError)
+        if (reply->error() == QNetworkReply::NoError)
+        {
+            QByteArray data = reply->readAll();
+            QBuffer buf(&data);
+            QImageReader reader(&buf);
+            if (reader.canRead())
             {
-                QByteArray data = reply->readAll();
-                QBuffer buf(&data);
-                QImageReader reader(&buf);
-                if (reader.canRead())
+                QString localPath = cacheFileName(domain);
+                QFile file(localPath);
+                if (file.open(QIODevice::WriteOnly))
                 {
-                    QString localPath = cacheFileName(domain);
-                    QFile file(localPath);
-                    if (file.open(QIODevice::WriteOnly))
-                    {
-                        file.write(data);
-                        file.close();
-                        m_memoryCache.insert(domain, new QString(localPath));
+                    file.write(data);
+                    file.close();
+                    m_memoryCache.insert(domain, new QString(localPath));
 
-                        delete attemptIndex;
-                        if (callback) callback(localPath);
-                        emit faviconReady(pageUrl, localPath);
-                        return;
+                    delete attemptIndex;
+                    m_pendingRequests.remove(domain);
+
+                    auto callbacks = m_pendingCallbacks.take(domain);
+                    for (auto &cb : callbacks) {
+                        if (cb) cb(localPath);
                     }
+                    emit faviconReady(pageUrl, localPath);
+                    return;
                 }
             }
+        }
 
-            (*attemptIndex)++;
-            tryNext();
-        });
-    };
-
-    tryNext();
+        (*attemptIndex)++;
+        tryNextUrl(domain, pageUrl, urls, attemptIndex);
+    });
 }
 
 void FaviconService::clearCache()
 {
     m_memoryCache.clear();
+    m_pendingRequests.clear();
+    m_pendingCallbacks.clear();
     QDir dir(cacheDirectory());
     dir.removeRecursively();
     QDir().mkpath(cacheDirectory());
