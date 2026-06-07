@@ -63,6 +63,12 @@ MainWindow::MainWindow(ILinkRepository *linkRepo, IFolderRepository *folderRepo,
     connect(m_listView, &QWidget::customContextMenuRequested, this, &MainWindow::showContextMenu);
     connect(m_cardView, &QWidget::customContextMenuRequested, this, &MainWindow::showContextMenu);
 
+    // 选中行变化 → 更新状态栏
+    connect(m_listView->selectionModel(), &QItemSelectionModel::selectionChanged,
+            this, &MainWindow::updateStatusBar);
+    connect(m_cardView->selectionModel(), &QItemSelectionModel::selectionChanged,
+            this, &MainWindow::updateStatusBar);
+
     // ── 拖拽排序：由 LinkListView 手动管理拖拽，完成后持久化 ──
     connect(m_listView, &LinkListView::linkMoveRequested, this, [this](int /*linkId*/, int /*insertRow*/) {
         // 用拖拽后的 model 顺序保存 sort_order
@@ -246,8 +252,32 @@ void MainWindow::buildLinkModel(const QVector<Link> &links)
 
     m_isRebuildingModel = false;
 
-    statusBar()->showMessage(
-        QStringLiteral("\u5171 %1 \u6761\u94fe\u63a5").arg(links.size()));
+    updateStatusBar();
+}
+
+void MainWindow::updateStatusBar()
+{
+    if (!m_linkModel) {
+        statusBar()->showMessage(QStringLiteral("\u51c6\u5907\u5c31\u7eea"));
+        return;
+    }
+
+    int total = m_linkModel->rowCount();
+    if (total == 0) {
+        statusBar()->showMessage(QStringLiteral("\u6682\u65e0\u94fe\u63a5"));
+        return;
+    }
+
+    int viewIdx = m_viewStack->currentIndex();
+    QItemSelectionModel *sel = (viewIdx == 0)
+        ? m_listView->selectionModel()
+        : m_cardView->selectionModel();
+    int selected = (sel && sel->hasSelection()) ? sel->selectedRows().size() : 0;
+
+    QString msg = QStringLiteral("\u5171 %1 \u6761\u94fe\u63a5").arg(total);
+    if (selected > 0)
+        msg += QStringLiteral(" | \u9009\u4e2d %1 \u6761").arg(selected);
+    statusBar()->showMessage(msg);
 }
 
 void MainWindow::refreshLinks()

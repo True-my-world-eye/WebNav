@@ -41,6 +41,7 @@ private slots:
     void onDeleteLink();
     void showContextMenu(const QPoint &pos);
     void onDoubleClicked(int linkId);
+    void updateStatusBar();
 
 private:
     void setupToolBar();
