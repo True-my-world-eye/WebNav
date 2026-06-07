@@ -1,7 +1,6 @@
 ﻿#include "MainWindow.h"
 #include "LinkEditDialog.h"
 #include "SettingsDialog.h"
-#include "AboutDialog.h"
 #include "PlatformUtils.h"
 #include <QToolBar>
 #include <QPushButton>
@@ -149,17 +148,16 @@ void MainWindow::setupToolBar()
 
     tb->addSeparator();
 
-    // \u2500\u2500 \u6587\u4ef6\u83dc\u5355 \u2500\u2500
+    // \u2500\u2500 \u83dc\u5355\u680f \u2500\u2500
     auto *fileMenu = menuBar()->addMenu(QStringLiteral("\u6587\u4ef6"));
     auto *importAct = fileMenu->addAction(QStringLiteral("[\u5bfc\u5165] \u5bfc\u5165\u4e66\u7b7e..."));
     connect(importAct, &QAction::triggered, this, [this]() { onImportBookmarks(); });
     auto *exportAct = fileMenu->addAction(QStringLiteral("[\u5bfc\u51fa] \u5bfc\u51fa\u4e66\u7b7e..."));
     connect(exportAct, &QAction::triggered, this, [this]() { onExportBookmarks(); });
-    fileMenu->addSeparator();
-    auto *helpAct = fileMenu->addAction(QStringLiteral("[?] \u4f7f\u7528\u8bf4\u660e"));
+
+    auto *helpMenu = menuBar()->addMenu(QStringLiteral("\u5e2e\u52a9"));
+    auto *helpAct = helpMenu->addAction(QStringLiteral("[?] \u4f7f\u7528\u8bf4\u660e"));
     connect(helpAct, &QAction::triggered, this, &MainWindow::openHelp);
-    auto *aboutAct = fileMenu->addAction(QStringLiteral("\u5173\u4e8e WebNav"));
-    connect(aboutAct, &QAction::triggered, this, &MainWindow::openAbout);
 
     // \u2500\u2500 \u6392\u5e8f\u64cd\u4f5c \u2500\u2500
     auto *moveUpAct = tb->addAction(QStringLiteral("\u2191 \u4e0a\u79fb"));
@@ -817,7 +815,7 @@ void MainWindow::onExportBookmarks()
 {
     QString filePath = QFileDialog::getSaveFileName(this,
         QStringLiteral("导出书签"),
-        QStringLiteral("bookmarks.html"),
+        QStringLiteral(""),
         QStringLiteral("CSV 文件 (*.csv);;HTML 书签 (*.html);;Markdown (*.md);;所有文件 (*)"));
     if (filePath.isEmpty()) return;
 
@@ -944,11 +942,6 @@ void MainWindow::openSettings()
             file.close();
         }
     }
-}
-
-void MainWindow::openAbout()
-{
-    AboutDialog d(this); d.exec();
 }
 
 void MainWindow::openHelp()

@@ -31,7 +31,6 @@ private slots:
     void onSearch(const QString &keyword);
     void refreshLinks();
     void openSettings();
-    void openAbout();
     void openHelp();
     void onImportBookmarks();
     void onExportBookmarks();
