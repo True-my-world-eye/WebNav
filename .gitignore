@@ -1,6 +1,5 @@
 # ── 编译产物 ──
 build/
-*/build/
 out/
 *.o
 *.obj
@@ -10,6 +9,9 @@ out/
 *.a
 *.so
 *.dylib
+
+# ── 部署包（可手动构建，不提交） ──
+deploy/
 
 # ── IDE 与编辑器 ──
 .vscode/
