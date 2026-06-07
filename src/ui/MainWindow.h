@@ -22,6 +22,7 @@ public:
     MainWindow(ILinkRepository *linkRepo, IFolderRepository *folderRepo,
                ITagRepository *tagRepo, QWidget *parent = nullptr);
     ~MainWindow() override;
+    void closeEvent(QCloseEvent *event) override;
 
 private slots:
     void onNewLink();

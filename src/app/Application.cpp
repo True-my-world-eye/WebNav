@@ -7,6 +7,9 @@
 #include <QApplication>
 #include <QFile>
 #include <QSettings>
+#include <QSystemTrayIcon>
+#include <QMenu>
+#include <QIcon>
 #include <QDebug>
 
 Application::Application() = default;
@@ -31,6 +34,10 @@ bool Application::initialize()
     applyTheme(themeName);
     m_mainWindow = std::make_unique<MainWindow>(
         m_linkRepo.get(), m_folderRepo.get(), m_tagRepo.get());
+
+    // ── 系统托盘图标 ──
+    setupTrayIcon();
+
     m_mainWindow->show();
     qInfo() << "[App] 启动完成";
     return true;
@@ -48,4 +55,41 @@ void Application::applyTheme(const QString &themeName)
         qApp->setStyleSheet(file.readAll());
         file.close();
     }
+}
+
+void Application::setupTrayIcon()
+{
+    if (!QSystemTrayIcon::isSystemTrayAvailable()) return;
+
+    m_trayIcon = new QSystemTrayIcon(QIcon(":/icons/app.svg"), this);
+    m_trayIcon->setToolTip(QStringLiteral("WebNav - 链接管理器"));
+
+    auto *trayMenu = new QMenu();
+    auto *showAct = trayMenu->addAction(QStringLiteral("显示窗口"));
+    connect(showAct, &QAction::triggered, this, [this]() {
+        m_mainWindow->show();
+        m_mainWindow->raise();
+        m_mainWindow->activateWindow();
+    });
+    auto *hideAct = trayMenu->addAction(QStringLiteral("隐藏到托盘"));
+    connect(hideAct, &QAction::triggered, this, [this]() {
+        m_mainWindow->hide();
+    });
+    trayMenu->addSeparator();
+    auto *quitAct = trayMenu->addAction(QStringLiteral("退出"));
+    connect(quitAct, &QAction::triggered, this, [this]() {
+        qApp->quit();
+    });
+
+    m_trayIcon->setContextMenu(trayMenu);
+    m_trayIcon->show();
+
+    // 双击托盘恢复窗口
+    connect(m_trayIcon, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
+        if (reason == QSystemTrayIcon::DoubleClick) {
+            m_mainWindow->show();
+            m_mainWindow->raise();
+            m_mainWindow->activateWindow();
+        }
+    });
 }

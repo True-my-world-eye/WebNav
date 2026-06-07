@@ -16,6 +16,8 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QApplication>
+#include <QSystemTrayIcon>
+#include <QCloseEvent>
 #include "models/LinkField.h"
 #include "models/Tag.h"
 #include "services/BookmarkImporter.h"
@@ -170,6 +172,17 @@ void MainWindow::setupToolBar()
 void MainWindow::setupStatusBar()
 {
     statusBar()->showMessage(QStringLiteral("\u51c6\u5907\u5c31\u7eea"));
+}
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    // \u6700\u5c0f\u5316\u5230\u6258\u76d8\uff0c\u4e0d\u9000\u51fa\uff08\u5982\u679c\u6709\u6258\u76d8\uff09
+    if (QSystemTrayIcon::isSystemTrayAvailable()) {
+        hide();
+        event->ignore();
+    } else {
+        event->accept();
+    }
 }
 
 void MainWindow::setupShortcuts()
