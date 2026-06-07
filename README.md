@@ -30,20 +30,60 @@
 
 ## 环境要求
 
-- **Qt**: 6.5+（需要 Core, Widgets, Sql, Network 模块）
-- **CMake**: 3.20+
-- **编译器**: MSVC 2022 / MinGW 11+ / GCC 11+
+| 平台 | 编译工具 | Qt 版本 |
+|------|----------|---------|
+| **Windows** | MinGW 11+ 或 MSVC 2022 | Qt 6.5+ (Core, Widgets, Sql, Network) |
+| **macOS** | Xcode 15+ (Clang) | Qt 6.5+ for macOS |
 
-## 快速开始
+- **CMake**: 3.20+
+
+## 构建
+
+### Windows 构建
 
 ```bash
+# 1. 克隆仓库
 git clone https://github.com/True-my-world-eye/WebNav.git
 cd WebNav
-mkdir build && cd build
-cmake .. -DCMAKE_PREFIX_PATH=/path/to/Qt6/6.x.x/mingw_64
-cmake --build . --target WebNav -- -j8
-./src/WebNav.exe
+
+# 2. CMake 配置（MinGW 示例，MSVC 同理）
+cmake -B build -G "MinGW Makefiles" -DCMAKE_PREFIX_PATH=C:/Qt/6.x.x/mingw_64
+
+# 3. 编译
+cmake --build build --target WebNav -- -j$(nproc)
+
+# 4. 打包部署（复制到其他电脑可直接运行）
+mkdir build/deploy
+cp build/src/WebNav.exe build/deploy/
+windeployqt --dir build/deploy build/deploy/WebNav.exe
 ```
+
+打包后将 `build/deploy/` 整个目录复制到目标 Windows 电脑，双击 `WebNav.exe` 即可运行。
+
+### macOS 构建
+
+> ⚠ macOS 版本**必须**在 Mac 电脑上构建（无法从 Windows 交叉编译）。
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/True-my-world-eye/WebNav.git
+cd WebNav
+
+# 2. CMake 配置
+cmake -B build -DCMAKE_PREFIX_PATH=/path/to/Qt/6.x.x/macos
+
+# 3. 编译
+cmake --build build --target WebNav -- -j$(sysctl -n hw.logicalcpu)
+
+# 4. 打包为 .app 并生成 .dmg 安装包
+macdeployqt build/src/WebNav.app -dmg
+```
+
+生成的 `WebNav.dmg` 可直接分发给其他 Mac 用户。
+
+### GitHub Actions 自动化构建
+
+本项目支持通过 GitHub Actions 在云端自动构建 Windows 和 macOS 版本，无需本地搭建环境。推送代码后，在 Actions 页面即可下载构建产物。
 
 ## 功能特色
 
@@ -70,7 +110,7 @@ cmake --build . --target WebNav -- -j8
 - **状态栏**: 实时显示 共X条链接 | 选中Y条
 - **快捷键**: Ctrl+N 新建 / Ctrl+F 搜索 / Delete 删除
 
-## 快捷键
+## 常用快捷键
 
 | 快捷键 | 功能 |
 |--------|------|
@@ -99,3 +139,7 @@ cmake --build . --target WebNav -- -j8
 ## 许可证
 
 MIT
+
+---
+
+> 有任何问题或建议，欢迎在 GitHub Issues 反馈。
