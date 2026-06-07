@@ -445,12 +445,11 @@ void MainWindow::onDeleteLink()
 
 void MainWindow::showContextMenu(const QPoint &pos)
 {
-    QModelIndex index;
     int viewIdx = m_viewStack->currentIndex();
-    if (viewIdx == 0)
-        index = m_listView->indexAt(pos);
-    else
-        index = m_cardView->indexAt(pos);
+    QAbstractItemView *view = (viewIdx == 0)
+        ? static_cast<QAbstractItemView*>(m_listView)
+        : static_cast<QAbstractItemView*>(m_cardView);
+    QModelIndex index = view->indexAt(pos);
 
     if (!index.isValid()) return;
 
@@ -458,29 +457,67 @@ void MainWindow::showContextMenu(const QPoint &pos)
     if (linkId <= 0) return;
 
     QMenu menu(this);
+
+    // \u2500\u2500 \u5355\u6761\u64cd\u4f5c \u2500\u2500
     QAction *openAct = menu.addAction(QStringLiteral("\U0001F310 \u6253\u5f00\u94fe\u63a5"));
     QAction *editAct = menu.addAction(QStringLiteral("\u270f \u7f16\u8f91"));
     menu.addSeparator();
-    QAction *delAct = menu.addAction(QStringLiteral("\U0001F5D1 \u5220\u9664"));
 
-    QAction *chosen = menu.exec(viewIdx == 0
-        ? m_listView->viewport()->mapToGlobal(pos)
-        : m_cardView->viewport()->mapToGlobal(pos));
+    // \u2500\u2500 \u6279\u91cf\u64cd\u4f5c\uff08\u5bf9\u9009\u4e2d\u5168\u90e8\u6709\u6548\uff09 \u2500\u2500
+    QVector<int> allSelected = selectedLinkIds();
+    if (allSelected.size() > 1) {
+        QAction *batchOpenAct = menu.addAction(QStringLiteral("\U0001F310 \u6279\u91cf\u6253\u5f00(%1\u4e2a)").arg(allSelected.size()));
+        QAction *batchTagAct = menu.addAction(QStringLiteral("\U0001F3F7 \u6279\u91cf\u6253\u6807\u7b7e"));
+        QAction *batchFolderAct = menu.addAction(QStringLiteral("\U0001F4C1 \u6279\u91cf\u79fb\u52a8\u6587\u4ef6\u5939"));
+        menu.addSeparator();
+        QAction *delAct = menu.addAction(QStringLiteral("\U0001F5D1 \u5220\u9664(%1\u4e2a)").arg(allSelected.size()));
 
-    if (chosen == openAct) {
-        auto opt = m_linkRepo->getById(linkId);
-        if (opt.has_value()) {
-            Link l = opt.value();
-            l.visitCount++;
-            l.lastVisitedAt = QDateTime::currentDateTime();
-            m_linkRepo->update(l);
-            PlatformUtils::openInBrowser(l.url);
+        QAction *chosen = menu.exec(view->viewport()->mapToGlobal(pos));
+
+        if (chosen == openAct) {
+            onOpenLink();
+        } else if (chosen == editAct) {
+            onDoubleClicked(linkId);
+        } else if (chosen == batchOpenAct) {
+            batchOpen(allSelected);
+        } else if (chosen == batchTagAct) {
+            batchTag(allSelected);
+        } else if (chosen == batchFolderAct) {
+            batchMoveFolder(allSelected);
+        } else if (chosen == delAct) {
+            onDeleteLink();
         }
-    } else if (chosen == editAct) {
-        onDoubleClicked(linkId);
-    } else if (chosen == delAct) {
-        m_linkRepo->remove(linkId);
-        refreshLinks();
+    } else {
+        menu.addSeparator();
+        QAction *copyUrlAct = menu.addAction(QStringLiteral("\U0001F4CB \u590d\u5236\u94fe\u63a5"));
+        QAction *copyTitleUrlAct = menu.addAction(QStringLiteral("\U0001F4CB \u590d\u5236\u6807\u9898+\u94fe\u63a5"));
+        menu.addSeparator();
+        QAction *delAct = menu.addAction(QStringLiteral("\U0001F5D1 \u5220\u9664"));
+
+        QAction *chosen = menu.exec(view->viewport()->mapToGlobal(pos));
+
+        if (chosen == openAct) {
+            onOpenLink();
+        } else if (chosen == editAct) {
+            onDoubleClicked(linkId);
+        } else if (chosen == copyUrlAct) {
+            auto opt = m_linkRepo->getById(linkId);
+            if (opt.has_value()) {
+                QClipboard *cb = QApplication::clipboard();
+                cb->setText(opt->url);
+                statusBar()->showMessage(QStringLiteral("\u94fe\u63a5\u5df2\u590d\u5236"), 2000);
+            }
+        } else if (chosen == copyTitleUrlAct) {
+            auto opt = m_linkRepo->getById(linkId);
+            if (opt.has_value()) {
+                QClipboard *cb = QApplication::clipboard();
+                cb->setText(opt->title + "\n" + opt->url);
+                statusBar()->showMessage(QStringLiteral("\u6807\u9898+\u94fe\u63a5\u5df2\u590d\u5236"), 2000);
+            }
+        } else if (chosen == delAct) {
+            m_linkRepo->remove(linkId);
+            refreshLinks();
+        }
     }
 }
 
@@ -551,6 +588,98 @@ void MainWindow::moveSelectedLink(int direction)
     m_listView->selectionModel()->setCurrentIndex(newIdx, QItemSelectionModel::ClearAndSelect);
 
     saveLinkOrder();
+}
+
+void MainWindow::batchOpen(const QVector<int> &ids)
+{
+    if (ids.isEmpty()) return;
+    for (int id : ids) {
+        auto opt = m_linkRepo->getById(id);
+        if (opt.has_value()) {
+            Link l = opt.value();
+            l.visitCount++;
+            l.lastVisitedAt = QDateTime::currentDateTime();
+            m_linkRepo->update(l);
+            PlatformUtils::openInBrowser(l.url);
+        }
+    }
+    statusBar()->showMessage(
+        QStringLiteral("已打开 %1 个链接").arg(ids.size()), 3000);
+}
+
+void MainWindow::batchTag(const QVector<int> &ids)
+{
+    if (ids.isEmpty()) return;
+    bool ok;
+    QString tagName = QInputDialog::getText(this,
+        QStringLiteral("批量打标签"),
+        QStringLiteral("输入标签名称（已有标签将被打上，不存在则新建）:"),
+        QLineEdit::Normal, "", &ok);
+    if (!ok || tagName.trimmed().isEmpty()) return;
+
+    // 查找或创建标签
+    auto existing = m_tagRepo->getByName(tagName.trimmed());
+    int tagId;
+    if (existing.has_value()) {
+        tagId = existing->id;
+    } else {
+        Tag t; t.name = tagName.trimmed();
+        tagId = m_tagRepo->insert(t);
+    }
+    if (tagId <= 0) return;
+
+    for (int linkId : ids)
+        m_tagRepo->addTagToLink(linkId, tagId);
+
+    statusBar()->showMessage(
+        QStringLiteral("已为 %1 个链接打上标签 \"%2\"").arg(ids.size()).arg(tagName.trimmed()), 3000);
+    m_sidebar->refresh();
+    refreshLinks();
+}
+
+void MainWindow::batchMoveFolder(const QVector<int> &ids)
+{
+    if (ids.isEmpty()) return;
+    // 弹出文件夹选择
+    QStringList items;
+    QMap<int, QString> folderMap;
+    if (m_folderRepo) {
+        int idx = 0;
+        items << QStringLiteral("未分类");
+        folderMap[-1] = QStringLiteral("未分类");
+        for (const auto &f : m_folderRepo->getAll()) {
+            items << f.name;
+            folderMap[f.id] = f.name;
+        }
+    }
+    bool ok;
+    QString selected = QInputDialog::getItem(this,
+        QStringLiteral("批量移动文件夹"),
+        QStringLiteral("选择目标文件夹:"),
+        items, 0, false, &ok);
+    if (!ok || selected.isEmpty()) return;
+
+    // 找到选中项的 id
+    int targetFolderId = -1;
+    for (auto it = folderMap.begin(); it != folderMap.end(); ++it) {
+        if (it.value() == selected) {
+            targetFolderId = it.key();
+            break;
+        }
+    }
+
+    for (int linkId : ids) {
+        auto opt = m_linkRepo->getById(linkId);
+        if (opt.has_value()) {
+            Link l = opt.value();
+            l.folderId = targetFolderId;
+            m_linkRepo->update(l);
+        }
+    }
+
+    statusBar()->showMessage(
+        QStringLiteral("已移动 %1 个链接到 \"%2\"").arg(ids.size()).arg(selected), 3000);
+    refreshLinks();
 }
 
 void MainWindow::onNewFolder(int parentId)

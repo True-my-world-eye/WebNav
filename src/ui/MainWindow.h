@@ -6,6 +6,7 @@
 #include <QStandardItemModel>
 #include <QAction>
 #include <QTimer>
+#include <QClipboard>
 #include "Sidebar.h"
 #include "SearchBar.h"
 #include "LinkListView.h"
@@ -46,7 +47,10 @@ private:
     void buildLinkModel(const QVector<Link> &links);
     void applyFilters();
     void saveLinkOrder();
-    void moveSelectedLink(int direction);  // -1=上移, 1=下移, 0=置顶
+    void moveSelectedLink(int direction);
+    void batchOpen(const QVector<int> &ids);
+    void batchTag(const QVector<int> &ids);
+    void batchMoveFolder(const QVector<int> &ids);
     int selectedLinkId() const;
     QVector<int> selectedLinkIds() const;
 
