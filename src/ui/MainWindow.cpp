@@ -232,6 +232,23 @@ void MainWindow::buildLinkModel(const QVector<Link> &links)
             folderNames[f.id] = f.name;
     }
 
+    if (!m_faviconService) {
+        m_faviconService = new FaviconService(this);
+        connect(m_faviconService, &FaviconService::faviconReady, this,
+            [this](const QString &pageUrl, const QString &localPath) {
+            if (!m_linkModel || localPath.isEmpty()) return;
+            QPixmap pix(localPath);
+            if (pix.isNull()) return;
+            for (int i = 0; i < m_linkModel->rowCount(); i++) {
+                QString url = m_linkModel->item(i, 1) ? m_linkModel->item(i, 1)->text() : QString();
+                if (url == pageUrl) {
+                    m_linkModel->item(i, 0)->setIcon(QIcon(pix));
+                    break;
+                }
+            }
+        });
+    }
+
     for (int i = 0; i < links.size(); i++)
     {
         const auto &link = links[i];
@@ -245,7 +262,18 @@ void MainWindow::buildLinkModel(const QVector<Link> &links)
             return item;
         };
 
-        m_linkModel->setItem(i, 0, makeItem(link.title.isEmpty() ? link.url : link.title));
+        auto *titleItem = makeItem(link.title.isEmpty() ? link.url : link.title);
+        if (m_faviconService && !link.url.isEmpty()) {
+            QString cached = m_faviconService->getCachedFavicon(link.url);
+            if (!cached.isEmpty()) {
+                QPixmap pix(cached);
+                if (!pix.isNull())
+                    titleItem->setIcon(QIcon(pix));
+            } else {
+                m_faviconService->fetchFavicon(link.url, [](const QString &){});
+            }
+        }
+        m_linkModel->setItem(i, 0, titleItem);
         m_linkModel->setItem(i, 1, makeItem(link.url));
 
         QString folderName = folderNames.value(link.folderId);

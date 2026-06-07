@@ -3,6 +3,7 @@
 #include <QTreeWidget>
 #include <QListWidget>
 #include <QLabel>
+#include <QPushButton>
 
 class IFolderRepository;
 class ITagRepository;
@@ -17,6 +18,7 @@ public:
     // 获取当前选中的筛选 ID（-1 表示无筛选）
     int currentFolderId() const { return m_selectedFolderId; }
     int currentTagId() const { return m_selectedTagId; }
+    bool isShowingBroken() const { return m_showingBroken; }
 
 signals:
     void allLinksRequested();
@@ -39,4 +41,6 @@ private:
     ITagRepository    *m_tagRepo = nullptr;
     int m_selectedFolderId = -1;
     int m_selectedTagId = -1;
+    bool m_showingBroken = false;
+    QPushButton *m_brokenBtn = nullptr;
 };

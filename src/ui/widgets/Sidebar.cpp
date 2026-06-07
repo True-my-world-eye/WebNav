@@ -29,8 +29,21 @@ Sidebar::Sidebar(QWidget *parent) : QWidget(parent)
     brokenBtn->setFixedSize(20, 20);
     brokenBtn->setObjectName("sidebarAddBtn");
     brokenBtn->setToolTip(QStringLiteral("\u67e5\u770b\u5931\u6548\u94fe\u63a5"));
-    connect(brokenBtn, &QPushButton::clicked, this, [this]() {
-        emit brokenLinksRequested();
+    brokenBtn->setCheckable(true);
+    m_brokenBtn = brokenBtn;
+    connect(brokenBtn, &QPushButton::clicked, this, [this](bool checked) {
+        if (checked) {
+            m_showingBroken = true;
+            // \u53d6\u6d88\u5176\u4ed6\u9009\u4e2d
+            m_selectedFolderId = -1;
+            m_selectedTagId = -1;
+            m_folderTree->clearSelection();
+            m_tagList->clearSelection();
+            emit brokenLinksRequested();
+        } else {
+            m_showingBroken = false;
+            emit folderSelected(-1);
+        }
     });
 
     folderHeader->addWidget(folderTitle);
@@ -106,6 +119,8 @@ void Sidebar::setupFolderTree()
             emit folderSelected(-1);
         } else {
             m_selectedFolderId = fid;
+            m_showingBroken = false;
+            if (m_brokenBtn) m_brokenBtn->setChecked(false);
             // 取消标签的选中
             if (m_selectedTagId != -1) {
                 m_selectedTagId = -1;
@@ -157,6 +172,8 @@ void Sidebar::setupTagList()
             emit tagSelected(-1);
         } else {
             m_selectedTagId = tid;
+            m_showingBroken = false;
+            if (m_brokenBtn) m_brokenBtn->setChecked(false);
             // 取消文件夹的选中
             if (m_selectedFolderId != -1) {
                 m_selectedFolderId = -1;
@@ -228,4 +245,8 @@ void Sidebar::refresh()
             item->setForeground(QColor(tag.color));
         }
     }
+
+    // 刷新后恢复失效按钮的选中状态
+    if (m_brokenBtn)
+        m_brokenBtn->setChecked(m_showingBroken);
 }

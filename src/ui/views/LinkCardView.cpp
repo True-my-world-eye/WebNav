@@ -56,6 +56,15 @@ void LinkCardDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     QString url   = index.sibling(index.row(), 1).data(Qt::DisplayRole).toString();
     QString tags  = index.sibling(index.row(), 3).data(Qt::DisplayRole).toString();
 
+    // 从 DecorationRole 获取 favicon（如果存在）
+    QPixmap favicon;
+    QVariant iconVar = index.sibling(index.row(), 0).data(Qt::DecorationRole);
+    if (iconVar.canConvert<QIcon>()) {
+        QIcon icon = iconVar.value<QIcon>();
+        if (!icon.isNull())
+            favicon = icon.pixmap(32, 32);
+    }
+
     // 域名提取
     QString domain;
     if (url.startsWith("http")) {
@@ -86,17 +95,24 @@ void LinkCardDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     painter->setPen(QPen(border, 1));
     painter->drawRoundedRect(r.adjusted(2, 2, -2, -2), 10, 10);
 
-    // ── 上方的占位图标（简化 favicon 占位） ──
+    // ── 上方的图标区 ──
     QRect iconRect(r.left() + r.width()/2 - 18, r.top() + 16, 36, 36);
     painter->setBrush(isDark ? QColor("#48484a") : QColor("#e8e8ed"));
     painter->setPen(Qt::NoPen);
     painter->drawRoundedRect(iconRect, 8, 8);
-    // 简化图标：画一个地球符号
-    painter->setPen(isDark ? QColor("#98989d") : QColor("#8e8e93"));
-    QFont iconFont = painter->font();
-    iconFont.setPixelSize(18);
-    painter->setFont(iconFont);
-    painter->drawText(iconRect, Qt::AlignCenter, QStringLiteral("\u{1F310}"));
+
+    if (!favicon.isNull()) {
+        // 有真实 favicon → 绘制
+        QRect iconDrawRect(r.left() + r.width()/2 - 14, r.top() + 20, 28, 28);
+        painter->drawPixmap(iconDrawRect, favicon);
+    } else {
+        // 无 favicon → 画默认地球符号
+        painter->setPen(isDark ? QColor("#98989d") : QColor("#8e8e93"));
+        QFont iconFont = painter->font();
+        iconFont.setPixelSize(18);
+        painter->setFont(iconFont);
+        painter->drawText(iconRect, Qt::AlignCenter, QStringLiteral("🌐"));
+    }
 
     // ── 标题 ──
     QRect titleRect(r.left() + 8, iconRect.bottom() + 6, r.width() - 16, 36);

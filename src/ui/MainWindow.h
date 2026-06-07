@@ -8,6 +8,7 @@
 #include <QTimer>
 #include <QClipboard>
 #include "Sidebar.h"
+#include "services/FaviconService.h"
 #include "SearchBar.h"
 #include "LinkListView.h"
 #include "LinkCardView.h"
@@ -81,4 +82,5 @@ private:
     QString m_filterKeyword;
 
     QTimer *m_dragRefreshTimer = nullptr;
+    FaviconService *m_faviconService = nullptr;
 };
