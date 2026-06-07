@@ -18,6 +18,7 @@
 #include <QApplication>
 #include <QSystemTrayIcon>
 #include <QCloseEvent>
+#include <QTextEdit>
 #include "models/LinkField.h"
 #include "models/Tag.h"
 #include "services/BookmarkImporter.h"
@@ -155,6 +156,8 @@ void MainWindow::setupToolBar()
     auto *exportAct = fileMenu->addAction(QStringLiteral("[\u5bfc\u51fa] \u5bfc\u51fa\u4e66\u7b7e..."));
     connect(exportAct, &QAction::triggered, this, [this]() { onExportBookmarks(); });
     fileMenu->addSeparator();
+    auto *helpAct = fileMenu->addAction(QStringLiteral("[?] \u4f7f\u7528\u8bf4\u660e"));
+    connect(helpAct, &QAction::triggered, this, &MainWindow::openHelp);
     auto *aboutAct = fileMenu->addAction(QStringLiteral("\u5173\u4e8e WebNav"));
     connect(aboutAct, &QAction::triggered, this, &MainWindow::openAbout);
 
@@ -815,7 +818,7 @@ void MainWindow::onExportBookmarks()
     QString filePath = QFileDialog::getSaveFileName(this,
         QStringLiteral("导出书签"),
         QStringLiteral("bookmarks.html"),
-        QStringLiteral("HTML 书签文件 (*.html);;Markdown (*.md);;所有文件 (*)"));
+        QStringLiteral("CSV 文件 (*.csv);;HTML 书签 (*.html);;Markdown (*.md);;所有文件 (*)"));
     if (filePath.isEmpty()) return;
 
     BookmarkExporter exporter;
@@ -823,7 +826,37 @@ void MainWindow::onExportBookmarks()
     auto folders = m_folderRepo ? m_folderRepo->getAll() : QVector<Folder>();
 
     bool ok = false;
-    if (filePath.endsWith(".md"))
+    if (filePath.endsWith(".csv")) {
+        // CSV 导出（直接在这里写，简单可靠）
+        QFile file(filePath);
+        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            QTextStream out(&file);
+            out.setEncoding(QStringConverter::Utf8);
+            out << "标题,URL,文件夹,标签,备注\n";
+            QMap<int, QString> folderNames;
+            for (const auto &f : folders) folderNames[f.id] = f.name;
+            for (const auto &link : links) {
+                QStringList tagNames;
+                if (m_tagRepo) {
+                    for (const auto &t : m_tagRepo->getTagsForLink(link.id))
+                        tagNames << t.name;
+                }
+                // CSV 转义：含逗号或引号的字段用双引号包裹
+                auto csvEscape = [](const QString &s) -> QString {
+                    if (s.contains(',') || s.contains('"') || s.contains('\n'))
+                        return "\"" + QString(s).replace("\"", "\"\"") + "\"";
+                    return s;
+                };
+                out << csvEscape(link.title.isEmpty() ? link.url : link.title) << ","
+                    << csvEscape(link.url) << ","
+                    << csvEscape(folderNames.value(link.folderId)) << ","
+                    << csvEscape(tagNames.join("; ")) << ","
+                    << csvEscape(link.notes.left(100)) << "\n";
+            }
+            file.close();
+            ok = true;
+        }
+    } else if (filePath.endsWith(".md"))
         ok = exporter.exportToMarkdown(filePath, links, folders);
     else
         ok = exporter.exportToFile(filePath, links, folders);
@@ -916,4 +949,78 @@ void MainWindow::openSettings()
 void MainWindow::openAbout()
 {
     AboutDialog d(this); d.exec();
+}
+
+void MainWindow::openHelp()
+{
+    QDialog dlg(this);
+    dlg.setWindowTitle(QStringLiteral("使用说明 - WebNav"));
+    dlg.resize(500, 500);
+    auto *layout = new QVBoxLayout(&dlg);
+
+    auto *text = new QTextEdit(&dlg);
+    text->setReadOnly(true);
+    text->setHtml(QStringLiteral(
+        "<h2>WebNav - 桌面网页链接管理器</h2>"
+        "<hr>"
+        "<h3>基本操作</h3>"
+        "<ul>"
+        "<li><b>新建链接</b>：工具栏 [+新建] 按钮 或 Ctrl+N</li>"
+        "<li><b>编辑链接</b>：双击数据行，或选中后点工具栏 [✏编辑]</li>"
+        "<li><b>打开链接</b>：选中后点工具栏 [🌐打开]</li>"
+        "<li><b>删除链接</b>：选中后按 Delete 键，或右键 → 删除</li>"
+        "</ul>"
+        "<h3>视图切换</h3>"
+        "<ul>"
+        "<li><b>列表视图</b>：Ctrl+1，以表格形式展示链接</li>"
+        "<li><b>卡片视图</b>：Ctrl+2，以卡片网格展示（含网站图标、域名、标签）</li>"
+        "</ul>"
+        "<h3>排序功能</h3>"
+        "<ul>"
+        "<li><b>拖拽排序</b>：在列表视图中直接拖拽行到两行之间调整顺序</li>"
+        "<li><b>工具栏排序</b>：选中链接后使用 [↑上移] [↓下移] [↥置顶] 按钮</li>"
+        "</ul>"
+        "<h3>文件夹与标签</h3>"
+        "<ul>"
+        "<li><b>新建文件夹/标签</b>：点击侧边栏标题旁的 [+] 按钮</li>"
+        "<li><b>筛选</b>：点击文件夹或标签筛选链接，再次点击取消筛选</li>"
+        "<li><b>文件夹右键</b>：新建子文件夹 / 重命名 / 删除</li>"
+        "<li><b>标签右键</b>：删除标签</li>"
+        "<li><b>失效链接</b>：点击侧边栏 [⚠] 按钮筛选失效链接</li>"
+        "</ul>"
+        "<h3>批量操作</h3>"
+        "<ul>"
+        "<li>按住 Ctrl 多选链接，右键弹出批量菜单</li>"
+        "<li>支持：批量打开、批量打标签、批量移动文件夹、批量删除</li>"
+        "</ul>"
+        "<h3>复制功能</h3>"
+        "<ul>"
+        "<li>右键链接 → [复制链接]：复制 URL 到剪贴板</li>"
+        "<li>右键链接 → [复制标题+链接]：同时复制标题和 URL</li>"
+        "</ul>"
+        "<h3>导入导出</h3>"
+        "<ul>"
+        "<li><b>导入</b>：文件 → 导入书签，支持 Chrome/Firefox/Edge HTML 书签</li>"
+        "<li><b>导出</b>：文件 → 导出书签，可导出为 CSV 或 HTML 格式</li>"
+        "</ul>"
+        "<h3>快捷键</h3>"
+        "<ul>"
+        "<li>Ctrl+N 新建 | Ctrl+F 搜索 | Delete 删除</li>"
+        "<li>Ctrl+1 列表 | Ctrl+2 卡片</li>"
+        "<li>双击编辑 | 右键菜单</li>"
+        "</ul>"
+        "<hr>"
+        "<p align='center'>"
+        "<b>开发者</b>：Truemwe<br>"
+        "<b>联系邮箱</b>：<a href='mailto:hwzhang0722@163.com'>hwzhang0722@163.com</a><br><br>"
+        "希望 WebNav 能为你的日常网页收藏与管理带来便利！"
+        "</p>"
+    ));
+    layout->addWidget(text);
+
+    auto *closeBtn = new QPushButton(QStringLiteral("关闭"), &dlg);
+    connect(closeBtn, &QPushButton::clicked, &dlg, &QDialog::accept);
+    layout->addWidget(closeBtn, 0, Qt::AlignCenter);
+
+    dlg.exec();
 }
