@@ -1,10 +1,12 @@
-﻿#include "LinkEditDialog.h"
+#include "LinkEditDialog.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMessageBox>
 #include <QUrl>
 
+// ── 构造函数 ──────────────────────────────────────────────────
+// 初始化编辑对话框，设置窗口属性
 LinkEditDialog::LinkEditDialog(QWidget *parent) : QDialog(parent) {
     setupUi();
     setWindowTitle(QStringLiteral("\u65b0\u5efa\u94fe\u63a5"));
@@ -12,6 +14,16 @@ LinkEditDialog::LinkEditDialog(QWidget *parent) : QDialog(parent) {
     resize(540, 600);
 }
 
+// ── UI 布局 ──────────────────────────────────────────────────
+// 创建表单布局：
+// - URL 输入（自动填充标题）
+// - 标题输入
+// - 文件夹选择
+// - 标签选择
+// - 备注输入
+// - 时间信息
+// - 附加字段编辑器
+// - 取消/保存按钮
 void LinkEditDialog::setupUi()
 {
     auto *main = new QVBoxLayout(this); main->setSpacing(8);

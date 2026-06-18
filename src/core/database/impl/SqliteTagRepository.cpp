@@ -1,4 +1,6 @@
-﻿// SqliteTagRepository.cpp
+// SqliteTagRepository.cpp — SQLite 标签仓库实现
+// 实现 ITagRepository 接口，提供标签的 CRUD 操作和链接-标签关联管理
+// 标签名称全局唯一，支持彩色标签显示
 
 #include "SqliteTagRepository.h"
 #include <QSqlQuery>
@@ -10,6 +12,9 @@ SqliteTagRepository::SqliteTagRepository(QSqlDatabase &db)
 {
 }
 
+// ── 辅助方法 ──────────────────────────────────────────────────
+
+// 从当前查询行解析为 Tag 对象
 Tag SqliteTagRepository::rowToTag(const QSqlQuery &query) const
 {
     Tag t;
@@ -20,6 +25,10 @@ Tag SqliteTagRepository::rowToTag(const QSqlQuery &query) const
     return t;
 }
 
+// ── 查询实现 ──────────────────────────────────────────────
+
+// 获取所有标签
+// 按名称升序排列
 QVector<Tag> SqliteTagRepository::getAll()
 {
     QVector<Tag> results;
@@ -29,6 +38,7 @@ QVector<Tag> SqliteTagRepository::getAll()
     return results;
 }
 
+// 根据 ID 获取单个标签
 std::optional<Tag> SqliteTagRepository::getById(int id)
 {
     QSqlQuery query(m_db);
@@ -39,6 +49,8 @@ std::optional<Tag> SqliteTagRepository::getById(int id)
     return std::nullopt;
 }
 
+// 根据名称获取标签
+// 用于批量打标签时查找已存在的标签
 std::optional<Tag> SqliteTagRepository::getByName(const QString &name)
 {
     QSqlQuery query(m_db);
@@ -49,6 +61,10 @@ std::optional<Tag> SqliteTagRepository::getByName(const QString &name)
     return std::nullopt;
 }
 
+// ── 写入实现 ──────────────────────────────────────────────
+
+// 插入新标签
+// 注意：标签名称有 UNIQUE 约束，重复名称会插入失败
 int SqliteTagRepository::insert(const Tag &tag)
 {
     QSqlQuery query(m_db);
@@ -61,6 +77,7 @@ int SqliteTagRepository::insert(const Tag &tag)
     return -1;
 }
 
+// 更新标签名称和颜色
 bool SqliteTagRepository::update(const Tag &tag)
 {
     QSqlQuery query(m_db);
@@ -71,6 +88,8 @@ bool SqliteTagRepository::update(const Tag &tag)
     return query.exec();
 }
 
+// 删除标签
+// 注意：由于外键约束，关联的 link_tags 记录会被自动删除
 bool SqliteTagRepository::remove(int id)
 {
     QSqlQuery query(m_db);
@@ -79,6 +98,10 @@ bool SqliteTagRepository::remove(int id)
     return query.exec();
 }
 
+// ── 链接-标签关联操作 ──────────────────────────────────────
+
+// 为链接添加标签
+// 使用 INSERT OR IGNORE 防止重复添加
 bool SqliteTagRepository::addTagToLink(int linkId, int tagId)
 {
     QSqlQuery query(m_db);
@@ -88,6 +111,7 @@ bool SqliteTagRepository::addTagToLink(int linkId, int tagId)
     return query.exec();
 }
 
+// 移除链接的某个标签
 bool SqliteTagRepository::removeTagFromLink(int linkId, int tagId)
 {
     QSqlQuery query(m_db);
@@ -97,6 +121,8 @@ bool SqliteTagRepository::removeTagFromLink(int linkId, int tagId)
     return query.exec();
 }
 
+// 获取链接的所有标签
+// 通过 link_tags 关联表进行多表连接查询
 QVector<Tag> SqliteTagRepository::getTagsForLink(int linkId)
 {
     QVector<Tag> results;
@@ -115,6 +141,8 @@ QVector<Tag> SqliteTagRepository::getTagsForLink(int linkId)
     return results;
 }
 
+// 获取包含某个标签的所有链接 ID
+// 用于标签筛选功能
 QVector<int> SqliteTagRepository::getLinkIdsForTag(int tagId)
 {
     QVector<int> results;
@@ -129,6 +157,7 @@ QVector<int> SqliteTagRepository::getLinkIdsForTag(int tagId)
     return results;
 }
 
+// 获取标签总数
 int SqliteTagRepository::count()
 {
     QSqlQuery query(m_db);

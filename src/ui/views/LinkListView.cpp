@@ -1,9 +1,17 @@
-// LinkListView.cpp
+// LinkListView.cpp — 列表视图实现
+// 以表格形式展示链接列表，支持：
+// - 只读模式（NoEditTriggers）
+// - 多选支持（ExtendedSelection）
+// - 拖拽排序（InternalMove）
+// - 双击编辑
+// - 右键菜单
 
 #include "LinkListView.h"
 #include <QHeaderView>
 #include <QDrag>
 
+// ── 构造函数 ──────────────────────────────────────────────────
+// 初始化列表视图，设置选择模式和拖拽支持
 LinkListView::LinkListView(QWidget *parent)
     : QTableView(parent)
 {
@@ -31,6 +39,8 @@ LinkListView::LinkListView(QWidget *parent)
     });
 }
 
+// ── 设置链接数据 ──────────────────────────────────────────────
+// 绑定数据模型到视图，设置列宽
 void LinkListView::setLinkData(QStandardItemModel *model)
 {
     m_model = model;
@@ -47,6 +57,10 @@ void LinkListView::setLinkData(QStandardItemModel *model)
     }
 }
 
+// ── 拖拽实现 ──────────────────────────────────────────────────
+
+// 开始拖拽
+// 记录源行索引，用于后续的行移动操作
 void LinkListView::startDrag(Qt::DropActions supportedActions)
 {
     QModelIndex idx = currentIndex();
@@ -54,6 +68,14 @@ void LinkListView::startDrag(Qt::DropActions supportedActions)
     QTableView::startDrag(supportedActions);
 }
 
+// 拖拽放下事件
+// 实现行移动逻辑，替代 Qt 内置的 InternalMove（不可靠）
+// 流程：
+// 1. 根据鼠标 Y 坐标计算目标行
+// 2. 读取源行数据
+// 3. 删除源行
+// 4. 插入到目标位置
+// 5. 发射信号通知持久化
 void LinkListView::dropEvent(QDropEvent *event)
 {
     if (!m_model || m_dragSourceRow < 0) {

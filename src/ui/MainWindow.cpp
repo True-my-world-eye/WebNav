@@ -1,4 +1,4 @@
-﻿#include "MainWindow.h"
+#include "MainWindow.h"
 #include "LinkEditDialog.h"
 #include "SettingsDialog.h"
 #include "PlatformUtils.h"
@@ -23,6 +23,11 @@
 #include "services/BookmarkImporter.h"
 #include "services/BookmarkExporter.h"
 
+// ── 构造函数 ──────────────────────────────────────────────────
+// 初始化主窗口，创建所有 UI 组件并连接信号槽
+// @param linkRepo   链接仓库（依赖注入）
+// @param folderRepo 文件夹仓库（依赖注入）
+// @param tagRepo    标签仓库（依赖注入）
 MainWindow::MainWindow(ILinkRepository *linkRepo, IFolderRepository *folderRepo,
                        ITagRepository *tagRepo, QWidget *parent)
     : QMainWindow(parent), m_linkRepo(linkRepo), m_folderRepo(folderRepo), m_tagRepo(tagRepo)
@@ -112,6 +117,8 @@ MainWindow::MainWindow(ILinkRepository *linkRepo, IFolderRepository *folderRepo,
 
 MainWindow::~MainWindow() = default;
 
+// ── 工具栏设置 ──────────────────────────────────────────────
+// 创建工具栏按钮：搜索、新建、视图切换、编辑、打开、删除、排序、设置
 void MainWindow::setupToolBar()
 {
     auto *tb = addToolBar(QStringLiteral("\u5de5\u5177\u680f"));
@@ -178,11 +185,15 @@ void MainWindow::setupToolBar()
     connect(settingsAct, &QAction::triggered, this, &MainWindow::openSettings);
 }
 
+// ── 状态栏设置 ──────────────────────────────────────────────
+// 初始化状态栏显示
 void MainWindow::setupStatusBar()
 {
     statusBar()->showMessage(QStringLiteral("\u51c6\u5907\u5c31\u7eea"));
 }
 
+// ── 窗口关闭事件 ──────────────────────────────────────────────
+// 如果系统托盘可用，最小化到托盘而不是退出
 void MainWindow::closeEvent(QCloseEvent *event)
 {
     // \u6700\u5c0f\u5316\u5230\u6258\u76d8\uff0c\u4e0d\u9000\u51fa\uff08\u5982\u679c\u6709\u6258\u76d8\uff09
@@ -194,6 +205,8 @@ void MainWindow::closeEvent(QCloseEvent *event)
     }
 }
 
+// ── 快捷键设置 ──────────────────────────────────────────────
+// 注册全局快捷键：Ctrl+N 新建、Ctrl+F 搜索、Ctrl+1/2 视图切换、Delete 删除
 void MainWindow::setupShortcuts()
 {
     auto *newSC = new QShortcut(QKeySequence("Ctrl+N"), this);
@@ -215,6 +228,9 @@ void MainWindow::setupShortcuts()
     connect(delSC, &QShortcut::activated, this, &MainWindow::onDeleteLink);
 }
 
+// ── 构建链接模型 ──────────────────────────────────────────────
+// 将链接数据转换为 QStandardItemModel，用于列表和卡片视图显示
+// 包含：标题、URL、文件夹、标签、备注五列
 void MainWindow::buildLinkModel(const QVector<Link> &links)
 {
     m_isRebuildingModel = true;
@@ -305,6 +321,8 @@ void MainWindow::buildLinkModel(const QVector<Link> &links)
     updateStatusBar();
 }
 
+// ── 更新状态栏 ──────────────────────────────────────────────
+// 显示链接总数和选中数量
 void MainWindow::updateStatusBar()
 {
     if (!m_linkModel) {
@@ -330,6 +348,8 @@ void MainWindow::updateStatusBar()
     statusBar()->showMessage(msg);
 }
 
+// ── 刷新链接列表 ──────────────────────────────────────────────
+// 清除所有筛选条件，显示所有链接
 void MainWindow::refreshLinks()
 {
     m_filterFolderId = -1;
@@ -338,6 +358,8 @@ void MainWindow::refreshLinks()
     buildLinkModel(m_linkRepo->getAll());
 }
 
+// ── 搜索处理 ──────────────────────────────────────────────
+// 根据关键词搜索链接，支持标题、URL、描述匹配
 void MainWindow::onSearch(const QString &keyword)
 {
     m_filterKeyword = keyword;
@@ -345,6 +367,8 @@ void MainWindow::onSearch(const QString &keyword)
     buildLinkModel(m_linkRepo->search(keyword));
 }
 
+// ── 应用筛选条件 ──────────────────────────────────────────────
+// 根据当前筛选状态（文件夹、标签）刷新链接列表
 void MainWindow::applyFilters()
 {
     m_filterKeyword.clear();
@@ -359,6 +383,8 @@ void MainWindow::applyFilters()
         buildLinkModel(m_linkRepo->getAll());
 }
 
+// ── 新建链接 ──────────────────────────────────────────────
+// 打开编辑对话框，创建新链接并保存到数据库
 void MainWindow::onNewLink()
 {
     LinkEditDialog dialog(this);
@@ -396,6 +422,8 @@ void MainWindow::onNewLink()
     }
 }
 
+// ── 视图切换 ──────────────────────────────────────────────
+// 在列表视图和卡片视图之间切换
 void MainWindow::toggleView()
 {
     m_isCardView = !m_isCardView;
@@ -406,6 +434,10 @@ void MainWindow::toggleView()
             : QStringLiteral("\u5217\u8868"));
 }
 
+// ── 辅助方法 ──────────────────────────────────────────────────
+
+// 获取当前选中的链接 ID
+// 根据当前视图（列表或卡片）获取选中项
 int MainWindow::selectedLinkId() const
 {
     int viewIdx = m_viewStack->currentIndex();
@@ -417,6 +449,7 @@ int MainWindow::selectedLinkId() const
     return -1;
 }
 
+// 获取所有选中的链接 ID（支持多选）
 QVector<int> MainWindow::selectedLinkIds() const
 {
     QVector<int> ids;
@@ -431,6 +464,8 @@ QVector<int> MainWindow::selectedLinkIds() const
     return ids;
 }
 
+// ── 双击编辑 ──────────────────────────────────────────────
+// 双击列表项或卡片时，打开编辑对话框
 void MainWindow::onDoubleClicked(int linkId)
 {
     auto opt = m_linkRepo->getById(linkId);
@@ -485,6 +520,8 @@ void MainWindow::onDoubleClicked(int linkId)
     }
 }
 
+// ── 编辑链接 ──────────────────────────────────────────────
+// 通过工具栏编辑按钮触发
 void MainWindow::onEditLink()
 {
     int linkId = selectedLinkId();
@@ -495,6 +532,8 @@ void MainWindow::onEditLink()
     onDoubleClicked(linkId);
 }
 
+// ── 打开链接 ──────────────────────────────────────────────
+// 在系统默认浏览器中打开链接，并更新访问统计
 void MainWindow::onOpenLink()
 {
     int linkId = selectedLinkId();
@@ -513,6 +552,8 @@ void MainWindow::onOpenLink()
     }
 }
 
+// ── 删除链接 ──────────────────────────────────────────────
+// 删除选中的链接（支持批量删除），显示确认对话框
 void MainWindow::onDeleteLink()
 {
     QVector<int> ids = selectedLinkIds();
@@ -536,6 +577,8 @@ void MainWindow::onDeleteLink()
     }
 }
 
+// ── 右键菜单 ──────────────────────────────────────────────
+// 显示上下文菜单，支持单条和批量操作
 void MainWindow::showContextMenu(const QPoint &pos)
 {
     int viewIdx = m_viewStack->currentIndex();
@@ -614,6 +657,8 @@ void MainWindow::showContextMenu(const QPoint &pos)
     }
 }
 
+// ── 保存链接顺序 ──────────────────────────────────────────────
+// 将当前列表中的链接顺序保存到数据库
 void MainWindow::saveLinkOrder()
 {
     if (!m_linkModel || m_isRebuildingModel) return;
@@ -627,6 +672,8 @@ void MainWindow::saveLinkOrder()
         m_linkRepo->reorderLinks(orders);
 }
 
+// ── 移动链接位置 ──────────────────────────────────────────────
+// @param direction  -1=上移, 1=下移, 0=置顶
 void MainWindow::moveSelectedLink(int direction)
 {
     int linkId = selectedLinkId();
@@ -683,6 +730,10 @@ void MainWindow::moveSelectedLink(int direction)
     saveLinkOrder();
 }
 
+// ── 批量操作 ──────────────────────────────────────────────────
+
+// 批量打开链接
+// 在系统浏览器中逐个打开选中的链接
 void MainWindow::batchOpen(const QVector<int> &ids)
 {
     if (ids.isEmpty()) return;
@@ -700,6 +751,8 @@ void MainWindow::batchOpen(const QVector<int> &ids)
         QStringLiteral("已打开 %1 个链接").arg(ids.size()), 3000);
 }
 
+// 批量打标签
+// 弹出输入框，为所有选中的链接添加同一个标签
 void MainWindow::batchTag(const QVector<int> &ids)
 {
     if (ids.isEmpty()) return;
@@ -730,6 +783,8 @@ void MainWindow::batchTag(const QVector<int> &ids)
     refreshLinks();
 }
 
+// 批量移动文件夹
+// 弹出文件夹选择对话框，将所有选中的链接移动到目标文件夹
 void MainWindow::batchMoveFolder(const QVector<int> &ids)
 {
     if (ids.isEmpty()) return;
@@ -775,6 +830,10 @@ void MainWindow::batchMoveFolder(const QVector<int> &ids)
     refreshLinks();
 }
 
+// ── 导入导出 ──────────────────────────────────────────────────
+
+// 导入书签
+// 支持 Chrome/Firefox/Edge 的 HTML 书签格式
 void MainWindow::onImportBookmarks()
 {
     QString filePath = QFileDialog::getOpenFileName(this,
@@ -811,6 +870,8 @@ void MainWindow::onImportBookmarks()
     refreshLinks();
 }
 
+// 导出书签
+// 支持 CSV、HTML、Markdown 三种格式
 void MainWindow::onExportBookmarks()
 {
     QString filePath = QFileDialog::getSaveFileName(this,
@@ -867,6 +928,10 @@ void MainWindow::onExportBookmarks()
             QStringLiteral("无法写入文件，请检查路径是否有写权限。"));
 }
 
+// ── 文件夹操作 ──────────────────────────────────────────────
+
+// 新建文件夹
+// 弹出输入框，创建新的文件夹
 void MainWindow::onNewFolder(int parentId)
 {
     bool ok;
@@ -881,6 +946,7 @@ void MainWindow::onNewFolder(int parentId)
     }
 }
 
+// 重命名文件夹
 void MainWindow::onRenameFolder(int folderId)
 {
     auto opt = m_folderRepo->getById(folderId);
@@ -896,6 +962,8 @@ void MainWindow::onRenameFolder(int folderId)
     }
 }
 
+// 删除文件夹
+// 显示确认对话框，删除文件夹及其所有子文件夹
 void MainWindow::onDeleteFolder(int folderId)
 {
     auto ret = QMessageBox::question(this,
@@ -909,6 +977,10 @@ void MainWindow::onDeleteFolder(int folderId)
     }
 }
 
+// ── 标签操作 ──────────────────────────────────────────────────
+
+// 删除标签
+// 显示确认对话框，删除标签并从所有链接中移除
 void MainWindow::onDeleteTag(int tagId)
 {
     QString tagName;
@@ -926,6 +998,10 @@ void MainWindow::onDeleteTag(int tagId)
     }
 }
 
+// ── 设置 ──────────────────────────────────────────────────────
+
+// 打开设置对话框
+// 保存设置后重新应用主题
 void MainWindow::openSettings()
 {
     SettingsDialog d(this);
@@ -944,6 +1020,10 @@ void MainWindow::openSettings()
     }
 }
 
+// ── 帮助 ──────────────────────────────────────────────────────
+
+// 打开使用说明对话框
+// 显示 HTML 格式的帮助文档
 void MainWindow::openHelp()
 {
     QDialog dlg(this);

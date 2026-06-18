@@ -1,4 +1,4 @@
-﻿// GlobalHotkey.cpp
+// GlobalHotkey.cpp
 
 #include "GlobalHotkey.h"
 #include <QDebug>

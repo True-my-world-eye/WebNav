@@ -1,4 +1,4 @@
-﻿// GlobalHotkey.h — 全局快捷键管理
+// GlobalHotkey.h — 全局快捷键管理
 // 注册系统级快捷键，支持后台运行时快速收藏
 
 #pragma once

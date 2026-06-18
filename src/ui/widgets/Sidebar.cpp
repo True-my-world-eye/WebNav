@@ -1,3 +1,7 @@
+// Sidebar.cpp — 侧边栏组件实现
+// 左侧导航栏，包含文件夹树和标签列表
+// 支持：文件夹/标签筛选、失效链接筛选、右键菜单操作
+
 #include "Sidebar.h"
 #include "database/interfaces/IFolderRepository.h"
 #include "database/interfaces/ITagRepository.h"
@@ -12,6 +16,8 @@
 #include <QHBoxLayout>
 #include <QTreeWidgetItemIterator>
 
+// ── 构造函数 ──────────────────────────────────────────────────
+// 初始化侧边栏布局，创建文件夹区域和标签区域
 Sidebar::Sidebar(QWidget *parent) : QWidget(parent)
 {
     auto *layout = new QVBoxLayout(this);
@@ -95,6 +101,8 @@ Sidebar::Sidebar(QWidget *parent) : QWidget(parent)
     layout->addStretch();
 }
 
+// ── 依赖注入 ──────────────────────────────────────────────────
+// 设置仓库实例，并刷新侧边栏内容
 void Sidebar::setRepositories(IFolderRepository *folderRepo, ITagRepository *tagRepo)
 {
     m_folderRepo = folderRepo;
@@ -102,6 +110,10 @@ void Sidebar::setRepositories(IFolderRepository *folderRepo, ITagRepository *tag
     refresh();
 }
 
+// ── 文件夹树设置 ──────────────────────────────────────────────
+// 创建文件夹树控件，设置交互行为：
+// - 单击：选中/取消选中文件夹
+// - 右键：上下文菜单（新建子文件夹、重命名、删除）
 void Sidebar::setupFolderTree()
 {
     m_folderTree = new QTreeWidget(this);
@@ -156,6 +168,10 @@ void Sidebar::setupFolderTree()
     });
 }
 
+// ── 标签列表设置 ──────────────────────────────────────────────
+// 创建标签列表控件，设置交互行为：
+// - 单击：选中/取消选中标签
+// - 右键：上下文菜单（删除标签）
 void Sidebar::setupTagList()
 {
     m_tagList = new QListWidget(this);
@@ -202,6 +218,9 @@ void Sidebar::setupTagList()
     });
 }
 
+// ── 刷新侧边栏 ──────────────────────────────────────────────
+// 重新从数据库加载文件夹树和标签列表
+// 用于数据变更后刷新显示
 void Sidebar::refresh()
 {
     // ── 刷新文件夹树 ──

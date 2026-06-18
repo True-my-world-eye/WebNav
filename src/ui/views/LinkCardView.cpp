@@ -1,4 +1,10 @@
-// LinkCardView.cpp — 卡片视图（带自定义绘制代理）
+// LinkCardView.cpp — 卡片视图实现
+// 以卡片网格形式展示链接，包含：
+// - favicon 图标
+// - 标题（加粗，自动省略）
+// - 域名（灰色，自动省略）
+// - 标签（蓝色）
+// 支持深色/浅色主题自动适配
 
 #include "LinkCardView.h"
 #include <QPainter>
@@ -7,6 +13,8 @@
 
 // ── LinkCardView ──────────────────────────────────
 
+// ── 构造函数 ──────────────────────────────────────────────────
+// 初始化卡片视图，设置图标模式和自定义绘制代理
 LinkCardView::LinkCardView(QWidget *parent)
     : QListView(parent)
 {
@@ -27,6 +35,7 @@ LinkCardView::LinkCardView(QWidget *parent)
     });
 }
 
+// 设置链接数据模型
 void LinkCardView::setLinkData(QStandardItemModel *model)
 {
     m_model = model;
@@ -34,18 +43,27 @@ void LinkCardView::setLinkData(QStandardItemModel *model)
 }
 
 // ── LinkCardDelegate ────────────────────────────
+// 自定义绘制代理，负责卡片的外观绘制
 
 LinkCardDelegate::LinkCardDelegate(QObject *parent)
     : QStyledItemDelegate(parent)
 {
 }
 
+// 返回卡片尺寸建议
 QSize LinkCardDelegate::sizeHint(const QStyleOptionViewItem & /*option*/,
                                   const QModelIndex & /*index*/) const
 {
     return QSize(180, 150);
 }
 
+// ── 卡片绘制 ──────────────────────────────────────────────────
+// 绘制单个卡片，包含：
+// 1. 背景（深色/浅色主题，选中状态）
+// 2. favicon 区域（36x36）
+// 3. 标题（加粗，自动省略）
+// 4. 域名（灰色，自动省略）
+// 5. 标签（蓝色，自动省略）
 void LinkCardDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option,
                               const QModelIndex &index) const
 {

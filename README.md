@@ -135,6 +135,7 @@ macdeployqt build/src/WebNav.app -dmg
 
 - [设计文档](design.md) — 完整的设计方案、数据库设计、架构说明
 - [开发规范](CONTRIBUTING.md) — 代码风格、工作流程、常见陷阱
+- [源码学习指南](源码学习指南.md) — 源码框架、功能说明、系统性学习路径
 
 ## 许可证
 

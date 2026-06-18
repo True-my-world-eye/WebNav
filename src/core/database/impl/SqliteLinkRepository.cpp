@@ -1,4 +1,6 @@
-// SqliteLinkRepository.cpp
+// SqliteLinkRepository.cpp — SQLite 链接仓库实现
+// 实现 ILinkRepository 接口，提供链接数据的 CRUD 操作
+// 注意：所有 QString 字段在绑定前需检查 isNull()，避免绑定为 SQL NULL
 
 #include "SqliteLinkRepository.h"
 #include <QSqlQuery>
@@ -10,7 +12,10 @@ SqliteLinkRepository::SqliteLinkRepository(QSqlDatabase &db)
 {
 }
 
+// ── 辅助方法 ──────────────────────────────────────────────────
+
 // 从当前查询行解析为 Link 对象
+// 将数据库行数据转换为 Link 结构体，处理 NULL 值和日期格式
 Link SqliteLinkRepository::rowToLink(const QSqlQuery &query) const
 {
     Link link;
@@ -37,6 +42,8 @@ Link SqliteLinkRepository::rowToLink(const QSqlQuery &query) const
 
 // ── 查询实现 ──────────────────────────────────────────────
 
+// 获取所有链接
+// 按 sort_order 升序、created_at 降序排列，确保手动排序优先
 QVector<Link> SqliteLinkRepository::getAll()
 {
     QVector<Link> results;
@@ -47,6 +54,8 @@ QVector<Link> SqliteLinkRepository::getAll()
     return results;
 }
 
+// 根据 ID 获取单条链接
+// 使用参数化查询防止 SQL 注入
 std::optional<Link> SqliteLinkRepository::getById(int id)
 {
     QSqlQuery query(m_db);
@@ -57,6 +66,8 @@ std::optional<Link> SqliteLinkRepository::getById(int id)
     return std::nullopt;
 }
 
+// 获取指定文件夹下的所有链接
+// folderId = -1 表示未分类链接
 QVector<Link> SqliteLinkRepository::getByFolder(int folderId)
 {
     QVector<Link> results;
@@ -71,6 +82,9 @@ QVector<Link> SqliteLinkRepository::getByFolder(int folderId)
     return results;
 }
 
+// 搜索链接
+// 使用 LIKE 模糊匹配标题、URL、描述三个字段
+// %keyword% 模式支持任意位置匹配
 QVector<Link> SqliteLinkRepository::search(const QString &keyword)
 {
     QVector<Link> results;
@@ -88,6 +102,8 @@ QVector<Link> SqliteLinkRepository::search(const QString &keyword)
     return results;
 }
 
+// 获取最近添加的链接
+// 按创建时间降序排列，返回指定数量
 QVector<Link> SqliteLinkRepository::getRecent(int limit)
 {
     QVector<Link> results;
@@ -102,6 +118,8 @@ QVector<Link> SqliteLinkRepository::getRecent(int limit)
     return results;
 }
 
+// 获取包含指定标签的所有链接
+// 通过 link_tags 关联表进行多表连接查询
 QVector<Link> SqliteLinkRepository::getByTag(int tagId)
 {
     QVector<Link> results;
@@ -121,6 +139,8 @@ QVector<Link> SqliteLinkRepository::getByTag(int tagId)
     return results;
 }
 
+// 获取同时满足文件夹和标签条件的链接
+// 组合筛选条件，用于侧边栏的文件夹+标签联合筛选
 QVector<Link> SqliteLinkRepository::getByFolderAndTag(int folderId, int tagId)
 {
     QVector<Link> results;
@@ -141,6 +161,8 @@ QVector<Link> SqliteLinkRepository::getByFolderAndTag(int folderId, int tagId)
     return results;
 }
 
+// 获取访问次数最多的链接
+// 按 visit_count 降序排列，用于"频繁访问"筛选
 QVector<Link> SqliteLinkRepository::getMostVisited(int limit)
 {
     QVector<Link> results;
@@ -155,6 +177,8 @@ QVector<Link> SqliteLinkRepository::getMostVisited(int limit)
     return results;
 }
 
+// 获取所有失效链接
+// is_broken = 1 表示链接已失效，用于侧边栏的失效链接筛选
 QVector<Link> SqliteLinkRepository::getBroken()
 {
     QVector<Link> results;
@@ -167,6 +191,9 @@ QVector<Link> SqliteLinkRepository::getBroken()
 
 // ── 写入实现 ──────────────────────────────────────────────
 
+// 插入新链接
+// 注意：QString() 默认构造为 null string，需要显式转为空字符串
+// 否则 Qt SQLite 驱动会将其绑定为 SQL NULL，导致 NOT NULL 约束失败
 int SqliteLinkRepository::insert(const Link &link)
 {
     QSqlQuery query(m_db);
@@ -195,6 +222,9 @@ int SqliteLinkRepository::insert(const Link &link)
     return -1;
 }
 
+// 更新链接信息
+// 自动更新 updated_at 时间戳
+// sync_version 用于同步时的冲突检测
 bool SqliteLinkRepository::update(const Link &link)
 {
     QSqlQuery query(m_db);
@@ -226,6 +256,8 @@ bool SqliteLinkRepository::update(const Link &link)
     return false;
 }
 
+// 删除指定 ID 的链接
+// 注意：由于外键约束，关联的 link_tags 和 link_fields 记录会被自动删除
 bool SqliteLinkRepository::remove(int id)
 {
     QSqlQuery query(m_db);
@@ -234,6 +266,8 @@ bool SqliteLinkRepository::remove(int id)
     return query.exec();
 }
 
+// 批量删除多个链接
+// 使用事务确保原子性：要么全部删除，要么全部回滚
 bool SqliteLinkRepository::removeMultiple(const QVector<int> &ids)
 {
     if (ids.isEmpty()) return true;
@@ -253,6 +287,8 @@ bool SqliteLinkRepository::removeMultiple(const QVector<int> &ids)
     return m_db.commit();
 }
 
+// 获取指定时间后有变更的链接
+// 用于增量同步，只获取本地变更的数据
 QVector<Link> SqliteLinkRepository::getChangedSince(const QDateTime &since)
 {
     QVector<Link> results;
@@ -267,6 +303,8 @@ QVector<Link> SqliteLinkRepository::getChangedSince(const QDateTime &since)
     return results;
 }
 
+// 获取链接总数
+// 用于状态栏显示
 int SqliteLinkRepository::count()
 {
     QSqlQuery query(m_db);
@@ -275,6 +313,8 @@ int SqliteLinkRepository::count()
     return 0;
 }
 
+// 获取失效链接总数
+// 用于侧边栏失效链接按钮显示
 int SqliteLinkRepository::brokenCount()
 {
     QSqlQuery query(m_db);
@@ -283,6 +323,9 @@ int SqliteLinkRepository::brokenCount()
     return 0;
 }
 
+// 批量更新链接排序序号
+// 用于拖拽排序和工具栏排序按钮
+// 使用事务确保原子性
 bool SqliteLinkRepository::reorderLinks(const QVector<QPair<int,int>> &orders)
 {
     m_db.transaction();
@@ -299,6 +342,9 @@ bool SqliteLinkRepository::reorderLinks(const QVector<QPair<int,int>> &orders)
 
 // ── 附加字段存储 ──────────────────────────────────────────
 
+// 保存链接的附加字段
+// 采用"先删后插"策略：先删除该链接的所有旧字段，再插入新字段
+// 使用事务确保原子性
 bool SqliteLinkRepository::saveLinkFields(int linkId, const QVector<LinkField> &fields)
 {
     // 先删除旧字段
@@ -325,6 +371,8 @@ bool SqliteLinkRepository::saveLinkFields(int linkId, const QVector<LinkField> &
     return m_db.commit();
 }
 
+// 获取链接的所有附加字段
+// 按 sort_order 排序，确保界面显示顺序一致
 QVector<LinkField> SqliteLinkRepository::getLinkFields(int linkId)
 {
     QVector<LinkField> results;

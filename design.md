@@ -1,4 +1,4 @@
-﻿# WebNav 设计文档
+# WebNav 设计文档
 
 > 基于 C++ / Qt 6 的桌面网页链接管理器
 >
@@ -25,6 +25,8 @@
 15. [跨平台注意事项](#15-跨平台注意事项)
 16. [技术栈与依赖](#16-技术栈与依赖)
 17. [测试策略](#17-测试策略)
+18. [代码注释规范](#19-代码注释规范)
+19. [Bug 修复记录](#20-bug-修复记录)
 
 ---
 
@@ -197,8 +199,10 @@ WebNav/
 │   └── integration/
 │       └── test_favicon_service.cpp
 │
-└── third_party/
-    └── libqrencode/                  # QR 码生成库（纯 C，源码包含）
+├── third_party/
+│   └── libqrencode/                  # QR 码生成库（纯 C，源码包含）
+│
+└── 源码学习指南.md                    # ★ 源码学习文档：框架、功能、学习路径
 ```
 
 ---
@@ -583,7 +587,72 @@ public:
 
 ---
 
-## 19. Bug 修复记录
+## 19. 代码注释规范
+
+> 本节记录项目的注释规范和注释覆盖情况，便于后续维护和学习。
+
+### 19.1 注释原则
+
+1. **中文注释**：所有关键逻辑使用中文注释，便于团队理解
+2. **文件头注释**：每个 .cpp 文件开头说明文件功能
+3. **方法注释**：公共接口和复杂方法添加功能说明
+4. **关键步骤注释**：复杂逻辑的每个步骤添加注释
+
+### 19.2 注释覆盖情况
+
+| 模块 | 文件 | 注释状态 | 说明 |
+|------|------|----------|------|
+| **数据模型** | Link.h, Folder.h, Tag.h, LinkField.h | ✅ 详细 | 每个字段都有中文注释 |
+| **数据库接口** | ILinkRepository.h | ✅ 详细 | 接口方法完整注释 |
+| | IFolderRepository.h, ITagRepository.h | ✅ 详细 | 接口方法完整注释 |
+| **数据库实现** | SqliteLinkRepository.cpp | ✅ 详细 | 所有方法添加注释 |
+| | SqliteFolderRepository.cpp | ✅ 详细 | 所有方法添加注释 |
+| | SqliteTagRepository.cpp | ✅ 详细 | 所有方法添加注释 |
+| | DatabaseManager.cpp | ✅ 详细 | 关键步骤注释 |
+| **核心服务** | FaviconService.cpp | ✅ 详细 | 异步流程注释 |
+| | CryptoService.cpp | ✅ 详细 | 加密逻辑注释 |
+| | BookmarkImporter.cpp | ✅ 详细 | 解析逻辑注释 |
+| | BookmarkExporter.cpp | ✅ 详细 | 导出逻辑注释 |
+| **UI 层** | MainWindow.cpp | ✅ 详细 | 信号连接和业务调度注释 |
+| | Sidebar.cpp | ✅ 详细 | 交互逻辑注释 |
+| | LinkListView.cpp | ✅ 详细 | 拖拽排序注释 |
+| | LinkCardView.cpp | ✅ 详细 | 自定义绘制注释 |
+| | LinkEditDialog.cpp | ✅ 详细 | 编辑流程注释 |
+| | FieldEditor.cpp | ✅ 详细 | 字段管理注释 |
+| **应用层** | Application.cpp | ✅ 详细 | 初始化流程注释 |
+| **工具类** | PlatformUtils.cpp | ⚠️ 部分 | 基础功能注释 |
+
+### 19.3 注释示例
+
+**文件头注释：**
+```cpp
+// SqliteLinkRepository.cpp — SQLite 链接仓库实现
+// 实现 ILinkRepository 接口，提供链接数据的 CRUD 操作
+// 注意：所有 QString 字段在绑定前需检查 isNull()，避免绑定为 SQL NULL
+```
+
+**方法注释：**
+```cpp
+// 获取所有链接
+// 按 sort_order 升序、created_at 降序排列，确保手动排序优先
+QVector<Link> SqliteLinkRepository::getAll()
+```
+
+**关键步骤注释：**
+```cpp
+// 拖拽放下事件
+// 实现行移动逻辑，替代 Qt 内置的 InternalMove（不可靠）
+// 流程：
+// 1. 根据鼠标 Y 坐标计算目标行
+// 2. 读取源行数据
+// 3. 删除源行
+// 4. 插入到目标位置
+// 5. 发射信号通知持久化
+```
+
+---
+
+## 20. Bug 修复记录
 
 > 本节记录开发/测试中遇到的运行时 Bug 及其修复方案，便于后续回溯。
 
