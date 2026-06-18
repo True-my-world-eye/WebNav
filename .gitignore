@@ -20,6 +20,7 @@ deploy/
 *.user.*
 .qtcreator/
 CMakeLists.txt.user*
+*.obsidian/
 
 # ── Qt Creator 部署配置 ──
 *.qtc*
